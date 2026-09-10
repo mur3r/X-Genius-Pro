@@ -1,0 +1,20 @@
+{
+  "_comment": "Скопируйте в config/settings.json. Любой ключ ЗАГЛАВНЫМИ буквами переопределяет одноимённую константу из xgenius/settings.py.",
+
+  "TELEGRAM_BOT_TOKEN": "0000000000:REPLACE_ME",
+  "TELEGRAM_CHAT_ID": "000000000",
+  "GOOGLE_SPEC_SHEET_URL": "https://docs.google.com/spreadsheets/d/<id>/export?format=csv",
+  "USE_GOOGLE_SPEC": true,
+
+  "EXECUTOR_MAX_WORKERS": 128,
+  "COMPOSER_WAIT_SECONDS": 12,
+  "SEND_VERIFY_SECONDS": 6,
+  "DM_LIMIT_PAUSE_SECONDS": 14400,
+  "SEND_STALL_PAUSE_SECONDS": 1800,
+  "SEND_STALL_THRESHOLD": 5,
+  "HEALTH_TIMEOUT_STRIKES": 3,
+  "RECOVERY_MAX_ATTEMPTS": 5,
+  "IDLE_HEALTH_INTERVAL": 30,
+  "BLOCK_MEDIA_URLS": true,
+  "GUI_REFRESH_MS": 3000
+}

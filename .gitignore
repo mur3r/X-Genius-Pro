@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+venv/
+
+# Локальные секреты и пути
+config/settings.json
+paths.json
+
+# Состояние, которое программа пишет в рабочую папку
+chat_cache.json
+chat_queue.json
+chat_state.json
+*.tmp
+monitoring_bot.db
+temp_messages.json
+temp_messages_stats.json
+logstest
+
+# Базовая папка с профилями Chrome, логами и данными аккаунтов
+SoftTwitter/
+browser_profiles/
+kook/
+logs/
+
+# Профиль Chrome для окна веб-интерфейса (chrome --app)
+webui_profile/

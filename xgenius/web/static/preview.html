@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X-Genius (preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ===== X-Genius operator console ===== */
+:root {
+  --bg: #F2F5F4; --surface: #FFFFFF; --surface-2: #E9EEEC; --line: #DCE3E1; --line-strong: #C6D0CC;
+  --text: #17232A; --text-2: #4E5F68; --muted: #7A8A93;
+  --accent: #19B3A0; --accent-ink: #0B6F63; --accent-soft: rgba(25, 179, 160, .14);
+  --ok: #2FA96A; --info: #2F86E0; --warn: #D9901E; --err: #DE4B62; --violet: #8A63D2;
+  --console-bg: #0C1115; --console-line: #1C262D; --console-text: #D6E0E5; --console-muted: #6E8290;
+  --shadow: 0 1px 2px rgba(15, 25, 30, .06), 0 8px 24px rgba(15, 25, 30, .08);
+  --r: 8px; --r-lg: 12px;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, "Cascadia Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #151C22; --surface-2: #1B242B; --line: #243039; --line-strong: #31414C;
+    --text: #E6EDF0; --text-2: #AEBCC4; --muted: #7F919B;
+    --accent: #2CC7B3; --accent-ink: #9FEDE2; --accent-soft: rgba(44, 199, 179, .16);
+    --ok: #48C774; --info: #4DA3F5; --warn: #EBA63B; --err: #EF5D73; --violet: #A98BE6;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 30px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #151C22; --surface-2: #1B242B; --line: #243039; --line-strong: #31414C;
+  --text: #E6EDF0; --text-2: #AEBCC4; --muted: #7F919B;
+  --accent: #2CC7B3; --accent-ink: #9FEDE2; --accent-soft: rgba(44, 199, 179, .16);
+  --ok: #48C774; --info: #4DA3F5; --warn: #EBA63B; --err: #EF5D73; --violet: #A98BE6;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 30px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+
+/* ---- base ---- */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 13.5px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); }
+.spacer { flex: 1; }
+code { font-family: var(--mono); font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+h1, h2 { margin: 0; text-wrap: balance; }
+input, select, textarea, button { font: inherit; color: inherit; }
+input[type=text], input[type=search], input[type=password], input[type=number], input[type=date], select, textarea {
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 7px 10px; outline: none; min-width: 0; transition: border-color .12s, box-shadow .12s;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+textarea { width: 100%; resize: vertical; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
+input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
+.ic { flex: none; vertical-align: -3px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---- buttons ---- */
+.btn { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r);
+  padding: 6px 11px; cursor: pointer; white-space: nowrap; font-weight: 500; line-height: 1.2; transition: background .12s, border-color .12s, color .12s; }
+.btn:hover { background: var(--surface-2); border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+.btn.sm { padding: 4px 8px; font-size: 12.5px; }
+.btn.lg { padding: 10px 18px; font-size: 14px; }
+.btn.icon { padding: 6px; width: 32px; height: 32px; justify-content: center; }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface-2); border-color: transparent; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #06221F; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.06); border-color: var(--accent); }
+.btn.outline-danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
+.btn.outline-danger:hover { background: color-mix(in srgb, var(--err) 12%, transparent); }
+.btn.danger { background: var(--err); border-color: var(--err); color: #fff; font-weight: 600; }
+.btn.ok { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 600; }
+.btn.danger-text { color: var(--err); }
+.btn.light { color: var(--console-text); }
+.btn.light:hover { background: var(--console-line); }
+.row-act { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-2); cursor: pointer; }
+.row-act:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.row-act:disabled { opacity: .3; cursor: default; }
+.row-act.primary { color: var(--accent-ink); }
+.row-act.warn { color: var(--warn); } .row-act.ok { color: var(--ok); } .row-act.err:hover { color: var(--err); }
+
+/* ---- chips / pills ---- */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: 12px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip.accent { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: .2px;
+  color: var(--st); background: color-mix(in srgb, var(--st) 13%, transparent); border: 1px solid color-mix(in srgb, var(--st) 35%, transparent); }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--st); box-shadow: 0 0 0 3px color-mix(in srgb, var(--st) 25%, transparent); }
+.pill.pulse::before { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--st) 10%, transparent); } }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); color: var(--text-2); font-size: 11px; }
+
+.banner { padding: 7px 18px; background: color-mix(in srgb, var(--warn) 16%, var(--surface)); border-bottom: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); color: var(--text); font-size: 12.5px; }
+
+/* ---- app shell ---- */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; letter-spacing: -.2px; }
+.brand.big { font-size: 24px; }
+.mark { width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(135deg, var(--accent), var(--accent-ink)); transform: rotate(45deg); box-shadow: 0 0 0 3px var(--accent-soft); }
+.brand.big .mark { width: 20px; height: 20px; }
+.ver { font-family: var(--mono); font-size: 11.5px; font-weight: 400; color: var(--muted); }
+.conn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--err); }
+.conn.on i { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 14px 18px 0; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.tile { padding: 12px 16px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile:last-child { border-right: 0; }
+.tile .v { font-size: 24px; font-weight: 600; letter-spacing: -.5px; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--tc, var(--text)); }
+.tile .l { font-size: 11.5px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); font-weight: 600; }
+.tile .s { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cmdbar { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 12px 18px 4px; }
+.cgroup { display: flex; align-items: center; gap: 6px; }
+.clabel { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); font-weight: 600; margin-right: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.clabel.light { color: var(--console-muted); }
+
+.filters { display: flex; align-items: center; gap: 8px; padding: 8px 18px; }
+.search { position: relative; display: flex; align-items: center; }
+.search .ic-slot { position: absolute; left: 10px; color: var(--muted); display: inline-flex; }
+.search input { width: 300px; padding-left: 32px; }
+
+/* ---- table ---- */
+.table-surface { flex: 1; overflow: auto; margin: 0 18px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: separate; border-spacing: 0; }
+thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+tbody td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+tbody tr.selected td { background: var(--accent-soft); }
+tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 12.5px; }
+.c-chk { width: 36px; } .c-idx { width: 44px; color: var(--muted); font-family: var(--mono); font-size: 12px; } .c-status { width: 150px; } .c-actions { width: 1%; }
+.acct { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; background: var(--av, var(--muted)); flex: none; letter-spacing: .3px; }
+.handle { font-family: var(--mono); font-weight: 600; font-size: 13px; }
+.sub { color: var(--muted); font-size: 11.5px; }
+.sub-row { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
+.dim { color: var(--muted); }
+.acts { display: flex; gap: 2px; }
+.acts .sep { width: 1px; height: 18px; background: var(--line); margin: 0 3px; align-self: center; }
+.empty { padding: 70px 20px; text-align: center; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.empty-mark { width: 52px; height: 52px; border-radius: 14px; background: var(--accent-soft); color: var(--accent-ink); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.empty-mark .ic { width: 24px; height: 24px; }
+.empty h2 { font-size: 17px; color: var(--text); }
+.empty .row { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ---- console (always dark) ---- */
+.console { margin: 12px 18px 14px; border-radius: var(--r-lg); background: var(--console-bg); color: var(--console-text); display: flex; flex-direction: column; height: 224px; border: 1px solid var(--console-line); }
+.console.collapsed { height: auto; }
+.console.collapsed .logs { display: none; }
+.console-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--console-line); }
+.console-head input { width: 240px; padding: 4px 9px; background: #121A20; border-color: #24313A; color: var(--console-text); }
+.check.light { color: var(--console-muted); }
+.logs { flex: 1; overflow: auto; padding: 8px 12px; font-family: var(--mono); font-size: 12px; line-height: 1.55; }
+.log { white-space: pre-wrap; word-break: break-word; color: var(--console-text); }
+.log.error { color: #FF8B9A; } .log.warning { color: #F5C068; }
+.log .acc { color: #6FD3C4; } .log .ts { color: var(--console-muted); }
+
+/* ---- forms / modals ---- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(6, 10, 13, .55); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.modal { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); width: min(560px, 100%); max-height: 92vh; display: flex; flex-direction: column; animation: rise .16s ease-out; }
+.modal.wide { width: min(940px, 100%); }
+@keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+.modal-head .x { margin-left: auto; }
+.modal-body { padding: 16px 18px; overflow: auto; }
+.modal-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--line); }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.field > span { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.field input, .field select { width: 100%; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 10px; }
+.check { display: flex; align-items: center; gap: 7px; }
+.check.sm { font-size: 12px; }
+.msg { min-height: 18px; font-size: 12.5px; color: var(--err); margin: 6px 0; }
+.hint { font-size: 12px; color: var(--muted); margin: -4px 0 10px; line-height: 1.5; }
+.section-title { font-weight: 600; margin: 14px 0 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-2); }
+.msgbox { border: 1px solid var(--line); border-radius: var(--r); padding: 10px; margin-bottom: 8px; background: var(--bg); }
+.msgbox .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.msgbox textarea { min-height: 90px; }
+.stats-table { width: 100%; border-collapse: collapse; }
+.stats-table th, .stats-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stats-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.stats-table th:first-child, .stats-table td:first-child { text-align: left; font-family: var(--mono); }
+.stats-table tr.total td { font-weight: 700; border-top: 2px solid var(--line-strong); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; font-variant-numeric: tabular-nums; }
+.kv b { font-family: var(--mono); font-size: 15px; }
+pre.help { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; line-height: 1.55; margin: 0; }
+
+/* ---- setup screen ---- */
+.screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.setup { display: grid; grid-template-columns: 1.1fr 1fr; width: min(880px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.setup-side { padding: 36px; background: linear-gradient(160deg, var(--accent-soft), transparent 70%); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+.setup-side p { margin: 0; color: var(--text-2); line-height: 1.6; max-width: 40ch; }
+.setup-req { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.setup-form { padding: 36px; display: flex; flex-direction: column; gap: 10px; }
+.setup-form h1 { font-size: 20px; margin-bottom: 8px; }
+.setup-form .btn { align-self: flex-start; margin-top: 6px; }
+@media (max-width: 720px) { .setup { grid-template-columns: 1fr; } .setup-side { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+.offline { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; width: min(560px, 100%); padding: 36px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.offline h1 { font-size: 20px; }
+.offline p { margin: 0; color: var(--text-2); line-height: 1.6; }
+
+/* ---- toasts ---- */
+#toasts { position: fixed; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
+.toast { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--info); border-radius: var(--r); padding: 10px 14px; box-shadow: var(--shadow); max-width: 440px; white-space: pre-wrap; animation: rise .15s ease-out; }
+.toast.ok { border-left-color: var(--ok); } .toast.error { border-left-color: var(--err); } .toast.warn { border-left-color: var(--warn); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+</style>
+</head>
+<body>
+
+<!-- ===================== OFFLINE (server not reachable) ===================== -->
+<div id="screen-offline" class="screen hidden">
+  <div class="offline">
+    <div class="brand big"><span class="mark"></span>X-Genius</div>
+    <h1>The X-Genius service is not running</h1>
+    <p>This page talks to the local service at <code id="offline-url"></code>. Start it with
+      <code>python main.py</code> on this machine — the page reconnects by itself.</p>
+    <span id="offline-status" class="chip">waiting for connection…</span>
+  </div>
+</div>
+
+<!-- ===================== SETUP (first start) ===================== -->
+<div id="screen-setup" class="screen hidden">
+  <div class="setup">
+    <aside class="setup-side">
+      <div class="brand big"><span class="mark"></span>X-Genius</div>
+      <p>Диспетчерская для рассылок в групповые чаты X. Один раз укажите базовую папку — дальше всё
+        хранится в ней: аккаунты, профили Chrome, логи, статистика.</p>
+      <ul class="setup-req">
+        <li><code>Bro/chrome.exe</code></li>
+        <li><code>Drivers/chromedriver.exe</code></li>
+      </ul>
+    </aside>
+    <form class="setup-form" id="setup-form">
+      <h1>Базовая папка</h1>
+      <label class="field"><span>Путь на этом сервере</span>
+        <input id="setup-dir" class="mono" type="text" placeholder="D:\SoftTwitter" autocomplete="off" spellcheck="false"></label>
+      <label class="check"><input id="setup-create" type="checkbox"> Создать папку, если её нет</label>
+      <div id="setup-msg" class="msg"></div>
+      <button id="setup-go" class="btn primary lg" type="submit">Продолжить</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MAIN ===================== -->
+<div id="screen-main" class="app hidden">
+  <div id="demo-banner" class="banner hidden">Demo data — the X-Genius service is not reachable. Start it with <code>python main.py</code>; this page switches to live data by itself.</div>
+  <header class="topbar">
+    <div class="brand"><span class="mark"></span>X-Genius <span id="version" class="ver"></span></div>
+    <span id="base-dir" class="chip mono" title="Base folder"></span>
+    <span class="spacer"></span>
+    <span id="conn" class="conn" title="connection"><i></i><span>connecting…</span></span>
+    <button id="btn-theme" class="btn icon ghost" title="Theme"></button>
+    <button id="btn-help" class="btn icon ghost" title="Help"></button>
+    <button id="btn-shutdown" class="btn ghost danger-text" title="Close all browsers and exit">Exit</button>
+  </header>
+
+  <section class="board" id="summary"></section>
+
+  <section class="cmdbar">
+    <div class="cgroup"><span class="clabel">Sessions</span>
+      <button class="btn" data-tool="login" data-ic="log-in">Login</button>
+      <button class="btn" data-tool="close" data-ic="lock">Close</button>
+      <button class="btn" data-tool="pause" data-ic="pause">Pause / Resume</button>
+      <button class="btn ghost" data-tool="reset_errors" data-ic="refresh-cw">Reset errors</button>
+      <button class="btn outline-danger" data-tool="close_all" data-ic="power">Close all</button>
+    </div>
+    <div class="cgroup"><span class="clabel">Mailing</span>
+      <button class="btn primary" data-tool="mailing" data-ic="send">Start selected</button>
+      <button class="btn primary" data-tool="mail_ready" data-ic="zap">Start all ready</button>
+      <button class="btn" data-tool="auto_parse" data-ic="layers">Parse groups</button>
+    </div>
+    <div class="cgroup"><span class="clabel">Accounts</span>
+      <button class="btn" data-tool="add" data-ic="plus">Add</button>
+      <button class="btn" data-tool="import" data-ic="upload">Import</button>
+      <button class="btn" data-tool="bulk_edit" data-ic="edit-3">Bulk edit</button>
+      <button class="btn" data-tool="mass_msg" data-ic="list">Mass messages</button>
+      <button class="btn" data-tool="export_chats" data-ic="download">Export chats</button>
+      <button class="btn outline-danger" data-tool="delete" data-ic="trash-2">Delete</button>
+    </div>
+    <div class="cgroup"><span class="clabel">Reports</span>
+      <button class="btn" data-tool="history" data-ic="bar-chart-2">History</button>
+    </div>
+  </section>
+
+  <section class="filters">
+    <label class="search"><span class="ic-slot" data-ic="search"></span>
+      <input id="f-search" type="search" placeholder="Search account, group or proxy" autocomplete="off"></label>
+    <select id="f-group"><option value="">All groups</option></select>
+    <select id="f-status">
+      <option value="">All statuses</option>
+      <option value="active">Ready</option>
+      <option value="mailing">Mailing</option>
+      <option value="paused">Paused</option>
+      <option value="relogin">Need relogin</option>
+      <option value="error">Errors</option>
+      <option value="inactive">Inactive</option>
+    </select>
+    <span id="f-count" class="muted"></span>
+    <span class="spacer"></span>
+    <span id="sel-count" class="chip accent">0 selected</span>
+    <button id="sel-clear" class="btn ghost sm">Clear</button>
+  </section>
+
+  <main class="table-surface">
+    <table id="accounts">
+      <thead>
+        <tr>
+          <th class="c-chk"><input id="chk-all" type="checkbox" title="Select all filtered"></th>
+          <th class="c-idx">#</th>
+          <th>Account</th>
+          <th class="c-status">Status</th>
+          <th>Proxy</th>
+          <th class="num" title="Groups in cache (disabled)">Groups</th>
+          <th class="num" title="Groups left in the current queue">Queue</th>
+          <th class="num" title="Messages: this session / last 24 h">Sent</th>
+          <th class="num">RT</th>
+          <th class="num">Followers</th>
+          <th>Last</th>
+          <th class="c-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty hidden">
+      <div class="empty-mark" data-ic="users"></div>
+      <h2>No accounts yet</h2>
+      <p>Add one account or import a list in the <code>username|auth_token|ct0|proxy|group</code> format.</p>
+      <div class="row"><button class="btn primary" data-tool="add" data-ic="plus">Add account</button>
+        <button class="btn" data-tool="import" data-ic="upload">Import</button></div>
+    </div>
+  </main>
+
+  <section id="logpanel" class="console">
+    <div class="console-head">
+      <span class="clabel light"><span data-ic="terminal"></span> Monitor</span>
+      <input id="log-filter" type="search" placeholder="filter: @user or text" autocomplete="off">
+      <label class="check light sm"><input id="log-autoscroll" type="checkbox" checked> autoscroll</label>
+      <span class="spacer"></span>
+      <button id="log-copy" class="btn ghost sm light" data-ic="copy">Copy</button>
+      <button id="log-clear" class="btn ghost sm light">Clear</button>
+      <button id="log-toggle" class="btn icon ghost light" title="Collapse"></button>
+    </div>
+    <div id="logs" class="logs"></div>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+<div id="toasts"></div>
+
+<script>
+/* ---- icons.js ---- */
+/* Inline stroke icons (Feather-style). I(name) returns an <svg>. Elements with [data-ic] get one injected. */
+'use strict';
+
+const ICONS = {
+  'log-in': '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>',
+  'eye': '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  'search': '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  'send': '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  'pause': '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
+  'play': '<polygon points="5 3 19 12 5 21 5 3"/>',
+  'sliders': '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  'message-circle': '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  'edit-2': '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  'edit-3': '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+  'bar-chart-2': '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  'x': '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  'trash-2': '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  'plus': '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  'download': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  'upload': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  'refresh-cw': '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  'lock': '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  'help-circle': '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  'moon': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  'sun': '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+  'power': '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>',
+  'copy': '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  'chevron-down': '<polyline points="6 9 12 15 18 9"/>',
+  'chevron-up': '<polyline points="18 15 12 9 6 15"/>',
+  'users': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'layers': '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  'terminal': '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+  'zap': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  'list': '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  'check': '<polyline points="20 6 9 17 4 12"/>',
+  'alert': '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  'folder': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+};
+
+function I(name, size = 15) {
+  const body = ICONS[name] || '';
+  return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}
+
+function injectIcons(root = document) {
+  root.querySelectorAll('[data-ic]').forEach((el) => {
+    if (el.querySelector('svg')) return;
+    el.insertAdjacentHTML('afterbegin', I(el.dataset.ic));
+  });
+}
+
+</script>
+<script>
+/* ---- demo.js ---- */
+/* Demo state shown when the X-Genius service is not reachable (page opened without the backend).
+   Clearly labelled in the UI; replaced by real data the moment the WebSocket connects. */
+'use strict';
+
+function demoAccount(i, username, group, status, color, extra = {}) {
+  return Object.assign({
+    index: i, username, group, proxy: `45.12.${i}.9:8080:user:pass`, has_token: true, has_password: i % 2 === 0,
+    status, status_color: color, status_reason: '', groups_count: 60 + i * 7, last_launch: `12:0${i}:17`,
+    is_active: true, is_mailing: false, is_paused: false, is_parsing: false, need_relogin: false, has_browser: true,
+    running: false, messages_sent: 120 + i * 31, msg_24h: 40 + i, retweets: i * 3, comments_24h: i,
+    followers: 1500 * i, has_messages: true, queue_len: 20 + i, disabled_groups: i % 3,
+  }, extra);
+}
+
+const DEMO_STATE = {
+  demo: true, phase: 'ready', version: 'demo', base_dir: 'D:\\SoftTwitter',
+  summary: { all: 6, ready: 1, mailing: 2, paused: 1, error: 1, inactive: 2, messages: 1234, retweets: 56, comments: 7, groups: 412, browsers: 4 },
+  groups: ['Alpha', 'Beta'],
+  accounts: [
+    demoAccount(1, 'crypto_ann', 'Alpha', 'MAILING', '#3498DB', { is_mailing: true, running: true }),
+    demoAccount(2, 'max_trades', 'Alpha', 'ACTIVE', '#27ae60'),
+    demoAccount(3, 'lena_nft', 'Beta', 'PAUSED', '#f39c12', { is_mailing: true, is_paused: true, running: true }),
+    demoAccount(4, 'dm_bot_44', 'Beta', 'NEED RELOGIN', '#9b59b6', { need_relogin: true, is_active: false, status_reason: 'RELOGIN' }),
+    demoAccount(5, 'old_acc', '', 'SUSPENDED', '#c0392b', { is_active: false, has_browser: false, status_reason: 'SUSPENDED', has_messages: false }),
+    demoAccount(6, 'fresh_one', 'Alpha', 'Inactive', 'gray', { is_active: false, has_browser: false, has_token: false }),
+  ],
+};
+
+const DEMO_LOGS = [
+  '[12:01:17] @crypto_ann - Отправляем в https://x.com/i/chat/g2035650823573876754 (ждем 21.3с; в очереди 21)...',
+  '[12:01:40] @crypto_ann - ✅ Отправка подтверждена (click).',
+  '[12:02:05] @dm_bot_44 - ⚠️ Временная ошибка в https://x.com/i/chat/g1999 (retry 1). Группу НЕ удаляем — вернули в конец очереди.',
+  '[12:02:30] @lena_nft - Paused mailing for lena_nft',
+  '[12:03:01] @old_acc - Ошибка входа: SUSPENDED',
+  '[12:03:10]  - Telegram bot: модуль TelegramBotManager отсутствует в сборке — бот не запущен.',
+];
+
+function enterDemo() {
+  S.demo = true;
+  applyState(DEMO_STATE);
+  appendLogs(DEMO_LOGS);
+  document.getElementById('demo-banner').classList.remove('hidden');
+}
+
+function leaveDemo() {
+  S.demo = false;
+  S.logs = [];
+  rerenderLogs();
+  document.getElementById('demo-banner').classList.add('hidden');
+}
+
+</script>
+<script>
+/* ---- app.js ---- */
+/* X-Genius web UI — state, WebSocket, board/table/console rendering, command bar actions.
+   Icons: icons.js (I, injectIcons). Dialog forms: dialogs.js (Dialogs). */
+'use strict';
+
+const S = {
+  phase: null, data: null, selected: new Set(),
+  q: '', group: '', status: '',
+  logs: [], logFilter: '', autoscroll: true, ws: null, connected: false,
+};
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}K` : String(n ?? 0));
+
+/* ------------------------------------------------------------------ api / toast */
+async function api(method, path, body) {
+  const opt = { method, headers: {} };
+  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  const res = await fetch(path, opt);
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* non-json */ }
+  if (!res.ok) throw new Error((data && data.error) || `${res.status} ${res.statusText}`);
+  return data;
+}
+function toast(msg, kind = 'info', ms = 4500) {
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+async function run(fn, okMsg) {
+  try {
+    const r = await fn();
+    if (okMsg) toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'ok');
+    return r;
+  } catch (e) {
+    toast(e.message || String(e), 'error', 7000);
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------ selection / filters */
+function accounts() { return (S.data && S.data.accounts) || []; }
+function selectedNames() {
+  const known = new Set(accounts().map((a) => a.username));
+  return Array.from(S.selected).filter((u) => known.has(u));
+}
+function requireSelection() {
+  const names = selectedNames();
+  if (!names.length) { toast('Select at least one account first.', 'warn'); return null; }
+  return names;
+}
+function renderSelectionCount() { $('#sel-count').textContent = `${selectedNames().length} selected`; }
+
+function statusCategory(a) {
+  if (a.is_paused) return 'paused';
+  if (a.need_relogin || /RELOGIN/.test(a.status)) return 'relogin';
+  if (a.status_reason && !/^(RECOVERING|DM LIMIT|SEND STALL)/i.test(a.status_reason)) return 'error';
+  if (a.is_mailing) return 'mailing';
+  if (a.is_active) return 'active';
+  return 'inactive';
+}
+function filteredRows() {
+  const q = S.q.trim().toLowerCase();
+  return accounts().filter((a) => {
+    if (S.group && a.group !== S.group) return false;
+    if (S.status && statusCategory(a) !== S.status) return false;
+    if (q && !(`${a.username} ${a.group} ${a.proxy}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+/* ------------------------------------------------------------------ rendering */
+function renderBoard() {
+  const s = S.data.summary || {};
+  const tile = (label, value, sub, color) => `<div class="tile" ${color ? `style="--tc:var(--${color})"` : ''}>
+    <span class="l">${label}</span><span class="v">${value ?? 0}</span><span class="s">${sub}</span></div>`;
+  $('#summary').innerHTML = [
+    tile('Accounts', s.all, `${s.browsers ?? 0} browsers open`),
+    tile('Ready', s.ready, 'logged in, idle', 'ok'),
+    tile('Mailing', s.mailing, `${s.paused ?? 0} paused`, 'info'),
+    tile('Errors', s.error, 'need attention', s.error ? 'err' : null),
+    tile('Inactive', s.inactive, 'no browser'),
+    tile('Sent', s.messages, `RT ${s.retweets ?? 0} · Comm ${s.comments ?? 0}`),
+    tile('Groups', s.groups, 'in caches'),
+  ].join('');
+  $('#version').textContent = S.data.version ? `v${S.data.version}` : '';
+  $('#base-dir').textContent = S.data.base_dir || '';
+}
+
+function renderGroupFilter() {
+  const sel = $('#f-group');
+  const groups = S.data.groups || [];
+  const have = Array.from(sel.options).map((o) => o.value);
+  if (JSON.stringify(['', ...groups]) !== JSON.stringify(have)) {
+    sel.innerHTML = `<option value="">All groups</option>` + groups.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
+    sel.value = groups.includes(S.group) ? S.group : '';
+    S.group = sel.value;
+  }
+}
+
+const AV = ['#5B8DEF', '#E07A5F', '#3D9970', '#8E6BD9', '#D48F1E', '#2AA5A0', '#C75B8A', '#6C8B3C'];
+function avatarColor(u) { let h = 0; for (const c of u) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; }
+function shortProxy(p) {
+  if (!p) return '<span class="dim">—</span>';
+  const parts = p.split(':');
+  return `<span class="mono">${esc(parts.length >= 2 ? `${parts[0]}:${parts[1]}` : p)}</span>`;
+}
+function statusPill(a) {
+  const cat = statusCategory(a);
+  const color = { active: 'ok', mailing: 'info', paused: 'warn', relogin: 'violet', error: 'err', inactive: 'muted' }[cat];
+  const label = a.status || (cat === 'active' ? 'ACTIVE' : 'INACTIVE');
+  return `<span class="pill ${cat === 'mailing' ? 'pulse' : ''}" style="--st:var(--${color})">${esc(label)}</span>`;
+}
+function act(name, icon, title, opts = {}) {
+  return `<button class="row-act ${opts.cls || ''}" data-act="${name}" title="${title}" ${opts.disabled ? 'disabled' : ''}>${I(icon, 14)}</button>`;
+}
+function rowHtml(a) {
+  const sel = S.selected.has(a.username);
+  const notes = [
+    a.has_token ? '' : '<span class="tag" title="no auth token">no token</span>',
+    a.has_messages ? '' : '<span class="tag" title="no mailing messages">no messages</span>',
+    a.disabled_groups ? `<span class="tag" title="groups disabled after strikes">${a.disabled_groups} off</span>` : '',
+  ].join('');
+  const pause = a.is_mailing
+    ? act('pause', a.is_paused ? 'play' : 'pause', a.is_paused ? 'Resume' : 'Pause', { cls: a.is_paused ? 'ok' : 'warn' })
+    : act('pause', 'pause', 'Not mailing', { disabled: true });
+  return `<tr data-u="${esc(a.username)}" class="${sel ? 'selected' : ''}">
+    <td class="c-chk"><input type="checkbox" data-chk ${sel ? 'checked' : ''}></td>
+    <td class="c-idx">${a.index}</td>
+    <td><div class="acct"><span class="avatar" style="--av:${avatarColor(a.username)}">${esc(a.username.slice(0, 2).toUpperCase())}</span>
+      <div><div class="handle">@${esc(a.username)}</div><div class="sub-row sub">${a.group ? `<span class="tag">${esc(a.group)}</span>` : ''}${notes}</div></div></div></td>
+    <td class="c-status">${statusPill(a)}</td>
+    <td class="sub">${shortProxy(a.proxy)}</td>
+    <td class="num">${a.groups_count}</td>
+    <td class="num">${a.queue_len}</td>
+    <td class="num">${a.messages_sent} <span class="dim">/ ${a.msg_24h}</span></td>
+    <td class="num">${a.retweets}</td>
+    <td class="num">${fmt(a.followers)}</td>
+    <td class="sub mono">${esc(a.last_launch)}</td>
+    <td class="c-actions"><div class="acts">
+      ${act('login', 'log-in', 'Login')}${act('view', 'eye', 'Bring browser to front', { disabled: !a.has_browser })}
+      ${act('parse', 'layers', 'Parse groups', { disabled: !a.is_active })}
+      ${act('mailing', 'send', 'Start mailing', { cls: 'primary', disabled: !(a.is_active && !a.is_mailing) })}${pause}
+      <span class="sep"></span>
+      ${act('settings', 'sliders', 'Settings')}${act('comments', 'message-circle', 'Comments')}${act('edit', 'edit-2', 'Edit account')}${act('stat', 'bar-chart-2', '24h stats')}
+      <span class="sep"></span>
+      ${act('close', 'x', 'Close browser', { disabled: !a.has_browser && !a.is_active })}${act('delete', 'trash-2', 'Delete account', { cls: 'err' })}
+    </div></td>
+  </tr>`;
+}
+function renderTable() {
+  const rows = filteredRows();
+  $('#rows').innerHTML = rows.map(rowHtml).join('');
+  $('#empty').classList.toggle('hidden', accounts().length > 0);
+  $('#f-count').textContent = `${rows.length} of ${accounts().length}`;
+  $('#chk-all').checked = rows.length > 0 && rows.every((a) => S.selected.has(a.username));
+  renderSelectionCount();
+}
+function showScreen(phase) {
+  $('#screen-offline').classList.toggle('hidden', phase !== 'offline');
+  $('#screen-setup').classList.toggle('hidden', phase !== 'setup');
+  $('#screen-main').classList.toggle('hidden', phase !== 'ready');
+}
+function showOffline(reason) {
+  if (S.data) return; // real or demo state is on screen; the websocket keeps retrying quietly
+  $('#offline-url').textContent = location.origin.startsWith('http') ? location.origin : 'http://127.0.0.1:8765';
+  $('#offline-status').textContent = reason || 'waiting for connection…';
+  showScreen('offline');
+}
+function applyState(data) {
+  if (S.demo && !data.demo) leaveDemo();
+  S.data = data;
+  const first = S.phase !== data.phase;
+  S.phase = data.phase;
+  showScreen(data.phase);
+  if (data.phase === 'setup') {
+    if (first) $('#setup-dir').value = data.base_dir || data.suggested_base_dir || '';
+    $('#setup-msg').textContent = data.setup_message || '';
+  } else {
+    renderBoard();
+    renderGroupFilter();
+    renderTable();
+  }
+}
+
+/* ------------------------------------------------------------------ console */
+function logLevel(line) {
+  const low = line.toLowerCase();
+  if (low.includes('login failed') || low.includes('error') || low.includes('ошибка') || line.includes('❌') || line.includes('⛔')) return 'error';
+  if (low.includes('skipping retweet') || low.includes('warning') || line.includes('⚠️') || low.includes('не удал')) return 'warning';
+  return 'info';
+}
+function logHtml(line) {
+  const m = line.match(/^(\[[^\]]+\])\s*(@\S+)?\s*-\s*(.*)$/s);
+  const body = m ? `<span class="ts">${esc(m[1])}</span> ${m[2] ? `<span class="acc">${esc(m[2])}</span> ` : ''}${esc(m[3])}` : esc(line);
+  return `<div class="log ${logLevel(line)}">${body}</div>`;
+}
+function logMatches(line) { const f = S.logFilter.trim().toLowerCase(); return !f || line.toLowerCase().includes(f); }
+function appendLogs(lines) {
+  const box = $('#logs');
+  S.logs.push(...lines);
+  if (S.logs.length > 3000) S.logs.splice(0, S.logs.length - 3000);
+  const html = lines.filter(logMatches).map(logHtml).join('');
+  if (html) box.insertAdjacentHTML('beforeend', html);
+  while (box.children.length > 3000) box.firstChild.remove();
+  if (S.autoscroll) box.scrollTop = box.scrollHeight;
+}
+function rerenderLogs() {
+  const box = $('#logs');
+  box.innerHTML = S.logs.filter(logMatches).map(logHtml).join('');
+  if (S.autoscroll) box.scrollTop = box.scrollHeight;
+}
+
+/* ------------------------------------------------------------------ websocket */
+function setConnected(on) {
+  S.connected = on;
+  const c = $('#conn');
+  c.classList.toggle('on', on);
+  c.querySelector('span').textContent = on ? 'live' : 'reconnecting…';
+}
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  S.ws = ws;
+  ws.onopen = () => setConnected(true);
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'state') applyState(msg.data);
+    else if (msg.type === 'logs') appendLogs(msg.lines || []);
+  };
+  ws.onclose = () => { setConnected(false); showOffline('service unreachable — retrying every 2 s'); setTimeout(connect, 2000); };
+  ws.onerror = () => ws.close();
+}
+
+/* ------------------------------------------------------------------ actions */
+const ROW_ACTIONS = {
+  login: (u) => run(() => api('POST', '/api/actions/login', { usernames: [u] }), `Login started for @${u}`),
+  view: (u) => run(() => api('POST', '/api/actions/view', { username: u })),
+  parse: (u) => run(() => api('POST', '/api/actions/parse', { usernames: [u] }), `Parsing groups for @${u}`),
+  mailing: (u) => run(() => api('POST', '/api/actions/mailing', { usernames: [u] }), (r) => (r.errors && r.errors.length ? r.errors.join('\n') : `Mailing started for @${u}`)),
+  pause: (u) => run(() => api('POST', '/api/actions/pause', { usernames: [u] })),
+  settings: (u) => Dialogs.settings(u),
+  comments: (u) => Dialogs.comments(u),
+  edit: (u) => Dialogs.editAccount(u),
+  stat: (u) => Dialogs.dailyStats(u),
+  close: (u) => run(() => api('POST', '/api/actions/close', { usernames: [u] }), `Session closed for @${u}`),
+  delete: async (u) => {
+    if (!await Dialogs.confirm('Delete account', `Delete @${u} permanently? Its browser will be closed.`, 'Delete', 'danger')) return;
+    run(() => api('POST', '/api/accounts/delete', { usernames: [u] }), `Deleted @${u}`);
+    S.selected.delete(u);
+  },
+};
+
+const TOOL_ACTIONS = {
+  login: async () => {
+    const names = requireSelection(); if (!names) return;
+    if (names.length > 1 && !await Dialogs.confirm('Login', `Log in ${names.length} accounts one by one, 40 seconds apart?`, 'Start')) return;
+    run(() => api('POST', '/api/actions/login', { usernames: names }), (r) => `Login started for ${r.started} account(s). Watch the monitor.`);
+  },
+  close: () => { const n = requireSelection(); if (n) run(() => api('POST', '/api/actions/close', { usernames: n }), (r) => `Closed ${r.closed} session(s)`); },
+  close_all: async () => {
+    if (!await Dialogs.confirm('Close all', 'Close every browser and stop all mailing?', 'Close all', 'danger')) return;
+    run(() => api('POST', '/api/actions/close', { all: true }), (r) => `All sessions closed (${r.closed})`);
+  },
+  pause: () => { const n = requireSelection(); if (n) run(() => api('POST', '/api/actions/pause', { usernames: n }), (r) => `Paused ${r.paused}, resumed ${r.resumed}`); },
+  reset_errors: () => run(() => api('POST', '/api/actions/reset_errors', {}), (r) => `Error statuses reset: ${r.reset}`),
+  mailing: () => { const n = requireSelection(); if (n) run(() => api('POST', '/api/actions/mailing', { usernames: n }), (r) => `Mailing started for ${r.started} of ${n.length}` + (r.errors.length ? `\n${r.errors.join('\n')}` : '')); },
+  mail_ready: async () => {
+    if (!await Dialogs.confirm('Start all ready', 'Start mailing on every ready account (logged in, has messages, not mailing)?', 'Start')) return;
+    run(() => api('POST', '/api/actions/mailing', { ready: true }), (r) => `Mailing started for ${r.started} account(s)`);
+  },
+  auto_parse: async () => {
+    const names = requireSelection(); if (!names) return;
+    if (!await Dialogs.confirm('Parse groups', `Collect iChat groups for ${names.length} account(s)? Runs 5 at a time.`, 'Start')) return;
+    run(() => api('POST', '/api/actions/parse', { usernames: names }), (r) => `Parsing started for ${r.started} active account(s)`);
+  },
+  add: () => Dialogs.addAccount(),
+  import: () => Dialogs.importAccounts(),
+  bulk_edit: () => { const n = requireSelection(); if (n) Dialogs.bulkEdit(n); },
+  mass_msg: () => { const n = requireSelection(); if (n) Dialogs.massSettings(n); },
+  export_chats: async () => {
+    const names = requireSelection(); if (!names) return;
+    const r = await run(() => api('POST', '/api/actions/export_chats', { usernames: names }));
+    if (r) Dialogs.exportResult(r.path, r.content);
+  },
+  delete: async () => {
+    const names = requireSelection(); if (!names) return;
+    const list = names.slice(0, 10).map((u) => `@${u}`).join('\n') + (names.length > 10 ? '\n…' : '');
+    if (!await Dialogs.confirm('Delete accounts', `Delete ${names.length} account(s)?\n\n${list}`, 'Delete', 'danger')) return;
+    run(() => api('POST', '/api/accounts/delete', { usernames: names }), (r) => `${r.deleted} account(s) deleted`);
+    names.forEach((u) => S.selected.delete(u));
+  },
+  history: () => Dialogs.history(),
+};
+
+/* ------------------------------------------------------------------ theme */
+function effectiveTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t) return t;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function paintThemeButton() { $('#btn-theme').innerHTML = I(effectiveTheme() === 'dark' ? 'sun' : 'moon'); }
+
+/* ------------------------------------------------------------------ init */
+function bindEvents() {
+  $('#rows').addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr[data-u]');
+    if (!tr) return;
+    const u = tr.dataset.u;
+    const btn = ev.target.closest('[data-act]');
+    if (btn) { ROW_ACTIONS[btn.dataset.act](u); return; }
+    if (ev.target.matches('[data-chk]')) {
+      if (ev.target.checked) S.selected.add(u); else S.selected.delete(u);
+      tr.classList.toggle('selected', ev.target.checked);
+      renderSelectionCount();
+      $('#chk-all').checked = filteredRows().every((a) => S.selected.has(a.username));
+    }
+  });
+  $('#chk-all').addEventListener('change', (ev) => {
+    filteredRows().forEach((a) => (ev.target.checked ? S.selected.add(a.username) : S.selected.delete(a.username)));
+    renderTable();
+  });
+  $('#sel-clear').addEventListener('click', () => { S.selected.clear(); renderTable(); });
+  $('#f-search').addEventListener('input', (ev) => { S.q = ev.target.value; renderTable(); });
+  $('#f-group').addEventListener('change', (ev) => { S.group = ev.target.value; renderTable(); });
+  $('#f-status').addEventListener('change', (ev) => { S.status = ev.target.value; renderTable(); });
+  $$('[data-tool]').forEach((b) => b.addEventListener('click', () => TOOL_ACTIONS[b.dataset.tool]()));
+
+  $('#log-filter').addEventListener('input', (ev) => { S.logFilter = ev.target.value; rerenderLogs(); });
+  $('#log-autoscroll').addEventListener('change', (ev) => { S.autoscroll = ev.target.checked; });
+  $('#log-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(S.logs.filter(logMatches).join('\n')).then(() => toast('Log copied', 'ok'), () => toast('Clipboard unavailable', 'warn'));
+  });
+  $('#log-clear').addEventListener('click', () => { S.logs = []; rerenderLogs(); });
+  $('#log-toggle').addEventListener('click', () => {
+    const p = $('#logpanel'); p.classList.toggle('collapsed');
+    $('#log-toggle').innerHTML = I(p.classList.contains('collapsed') ? 'chevron-up' : 'chevron-down');
+  });
+  $('#btn-theme').addEventListener('click', () => {
+    const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('xg-theme', next); } catch (e) { /* ignore */ }
+    paintThemeButton();
+  });
+  $('#btn-help').addEventListener('click', () => Dialogs.help());
+  $('#btn-shutdown').addEventListener('click', async () => {
+    if (!await Dialogs.confirm('Exit', 'Close every browser and stop X-Genius?', 'Exit', 'danger')) return;
+    run(() => api('POST', '/api/shutdown', {}), 'Shutting down…');
+  });
+  $('#setup-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const r = await run(() => api('POST', '/api/setup', { base_dir: $('#setup-dir').value, create: $('#setup-create').checked }));
+    if (r && r.warnings && r.warnings.length) toast(r.warnings.join('\n'), 'warn', 9000);
+    if (r) refreshState();
+  });
+}
+async function refreshState() {
+  try { applyState(await api('GET', '/api/state')); } catch (e) { if (!S.data) enterDemo(); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  let saved = '';
+  try { saved = localStorage.getItem('xg-theme') || ''; } catch (e) { /* ignore */ }
+  if (saved) document.documentElement.dataset.theme = saved;
+  injectIcons();
+  $('#btn-help').innerHTML = I('help-circle');
+  $('#log-toggle').innerHTML = I('chevron-down');
+  paintThemeButton();
+  bindEvents();
+  refreshState();
+  connect();
+});
+
+</script>
+<script>
+/* ---- dialogs.js ---- */
+/* X-Genius web UI — modal dialogs and forms. Uses api/toast/run/S/esc from app.js and I() from icons.js. */
+'use strict';
+
+const Dialogs = (() => {
+  /* ---------------------------------------------------------------- modal core */
+  function open({ title, icon, body, buttons = [], wide = false }) {
+    const root = document.getElementById('modal-root');
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-label="${esc(title)}">
+      <div class="modal-head">${icon ? I(icon, 16) : ''}${esc(title)}<button class="btn icon ghost x" data-x title="Close">${I('x')}</button></div>
+      <div class="modal-body">${body}</div>
+      <div class="modal-foot"></div></div>`;
+    const dlg = { el: overlay, body: overlay.querySelector('.modal-body'), close: () => overlay.remove() };
+    const foot = overlay.querySelector('.modal-foot');
+    buttons.forEach((b) => {
+      const btn = document.createElement('button');
+      btn.className = `btn ${b.kind || ''}`;
+      btn.textContent = b.label;
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try { if (b.onClick) await b.onClick(dlg); } finally { btn.disabled = false; }
+      });
+      foot.appendChild(btn);
+    });
+    overlay.querySelector('[data-x]').addEventListener('click', dlg.close);
+    overlay.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') dlg.close(); });
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) dlg.close(); });
+    root.appendChild(overlay);
+    const first = overlay.querySelector('input:not([type=checkbox]), textarea, select, button');
+    if (first) first.focus();
+    return dlg;
+  }
+
+  function confirm(title, text, okLabel = 'OK', kind = 'primary') {
+    return new Promise((resolve) => {
+      const dlg = open({
+        title, icon: kind === 'danger' ? 'alert' : undefined, body: `<div style="white-space:pre-wrap;line-height:1.55">${esc(text)}</div>`,
+        buttons: [
+          { label: 'Cancel', kind: 'ghost', onClick: (d) => { d.close(); resolve(false); } },
+          { label: okLabel, kind, onClick: (d) => { d.close(); resolve(true); } },
+        ],
+      });
+      dlg.el.querySelector('[data-x]').addEventListener('click', () => resolve(false));
+      dlg.el.addEventListener('click', (ev) => { if (ev.target === dlg.el) resolve(false); });
+    });
+  }
+
+  const field = (label, name, value = '', opts = {}) => `<label class="field"><span>${esc(label)}</span>
+    <input name="${name}" type="${opts.type || 'text'}" value="${esc(value)}" placeholder="${esc(opts.placeholder || '')}" ${opts.mono ? 'class="mono"' : ''} ${opts.attrs || ''}></label>`;
+  const formData = (dlg) => Object.fromEntries(Array.from(dlg.body.querySelectorAll('[name]')).map((el) => [el.name, el.type === 'checkbox' ? el.checked : el.value]));
+  const accountFields = (a = {}) => `<div class="grid2">
+      ${field('Username', 'username', a.username, { mono: true })}${field('Password', 'password', a.password, { type: 'password' })}
+      ${field('Proxy (host:port:user:pass)', 'proxy', a.proxy, { mono: true })}${field('User-Agent (optional)', 'user_agent', a.user_agent)}
+      ${field('Group', 'group', a.group)}${field('Auth token', 'auth_token', a.auth_token, { mono: true })}
+      ${field('CT0 token', 'ct0_token', a.ct0_token, { mono: true })}
+    </div>`;
+
+  /* ---------------------------------------------------------------- accounts */
+  function addAccount() {
+    open({
+      title: 'Add account', icon: 'plus', body: accountFields() + '<div class="hint">A password or an auth token is required.</div>',
+      buttons: [{ label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() }, {
+        label: 'Add account', kind: 'primary',
+        onClick: async (d) => { if (await run(() => api('POST', '/api/accounts', formData(d)), 'Account added')) d.close(); },
+      }],
+    });
+  }
+
+  function importAccounts() {
+    open({
+      title: 'Import accounts', icon: 'upload', wide: true,
+      body: `<div class="hint">One account per line: <code>username|auth_token|ct0_token|proxy|group</code>. Only username and auth_token are required;
+        existing usernames are skipped. Paste the contents of your accounts file here.</div>
+        <textarea name="text" rows="14" placeholder="user1|auth|ct0|host:port:login:pass|group A"></textarea>`,
+      buttons: [{ label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() }, {
+        label: 'Import', kind: 'primary',
+        onClick: async (d) => {
+          const r = await run(() => api('POST', '/api/accounts/import', formData(d)), (x) => `Imported ${x.added}, skipped ${x.skipped}`);
+          if (r) d.close();
+        },
+      }],
+    });
+  }
+
+  async function editAccount(username) {
+    const a = await run(() => api('GET', `/api/accounts/${encodeURIComponent(username)}`));
+    if (!a) return;
+    open({
+      title: `Edit @${username}`, icon: 'edit-2', body: accountFields(a),
+      buttons: [{ label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() }, {
+        label: 'Save changes', kind: 'primary',
+        onClick: async (d) => { if (await run(() => api('PUT', `/api/accounts/${encodeURIComponent(username)}`, formData(d)), 'Account saved')) d.close(); },
+      }],
+    });
+  }
+
+  function bulkEdit(usernames) {
+    open({
+      title: `Bulk edit · ${usernames.length} accounts`, icon: 'edit-3',
+      body: `<label class="check"><input name="chg_group" type="checkbox"> Change group</label>
+        ${field('New group name', 'group', '')}
+        <label class="check"><input name="chg_proxy" type="checkbox"> Change proxy</label>
+        <div class="hint">One proxy for all, or one per account on separate lines (${usernames.length} lines, same order as selected).</div>
+        <textarea name="proxies" rows="6"></textarea>`,
+      buttons: [{ label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() }, {
+        label: 'Apply', kind: 'primary',
+        onClick: async (d) => {
+          const f = formData(d);
+          const body = { usernames };
+          if (f.chg_group) body.group = f.group;
+          if (f.chg_proxy) body.proxies = f.proxies;
+          if (await run(() => api('POST', '/api/accounts/bulk_edit', body), (x) => `Updated ${x.updated} account(s)`)) d.close();
+        },
+      }],
+    });
+  }
+
+  /* ---------------------------------------------------------------- settings */
+  const cycleFields = (c = {}) => `<div class="grid4">
+      ${field('Messages per cycle', 'messages_per_cycle', c.messages_per_cycle ?? 16, { type: 'number' })}
+      ${field('Rest time, min', 'rest_time_minutes', c.rest_time_minutes ?? 30, { type: 'number' })}
+      ${field('Retweets per cycle', 'retweet_count', c.retweet_count ?? 0, { type: 'number' })}
+      ${field('Retweet limit / 24h', 'max_total_retweets', c.max_total_retweets ?? 0, { type: 'number' })}
+    </div>
+    <label class="check"><input name="media_enabled" type="checkbox" ${c.media_enabled ? 'checked' : ''}> Attach a random GIF</label>`;
+
+  function messageBox(m, i) {
+    return `<div class="msgbox" data-msg>
+      <div class="row"><b>Message ${i + 1}</b><span class="spacer"></span>
+        <span class="sub">send</span><input data-count type="number" min="1" value="${m.count ?? 1}" style="width:64px"><span class="sub">times, then next</span>
+        <button class="row-act err" data-rm title="Remove">${I('x', 14)}</button></div>
+      <textarea data-text placeholder="Message text…">${esc(m.text ?? '')}</textarea></div>`;
+  }
+  function messagesEditor(list) {
+    const items = list && list.length ? list : [{ text: '', count: 1 }];
+    return `<div class="section-title">Mailing messages<span class="spacer"></span><button class="btn sm" data-add-msg>${I('plus', 13)} Add variation</button></div>
+      <div data-msgs>${items.map(messageBox).join('')}</div>`;
+  }
+  function wireMessages(dlg) {
+    const box = dlg.body.querySelector('[data-msgs]');
+    dlg.body.querySelector('[data-add-msg]').addEventListener('click', () => {
+      box.insertAdjacentHTML('beforeend', messageBox({ text: '', count: 1 }, box.children.length));
+    });
+    box.addEventListener('click', (ev) => {
+      const rm = ev.target.closest('[data-rm]');
+      if (rm && box.children.length > 1) rm.closest('[data-msg]').remove();
+    });
+  }
+  const readMessages = (dlg) => Array.from(dlg.body.querySelectorAll('[data-msg]')).map((m) => ({
+    text: m.querySelector('[data-text]').value, count: parseInt(m.querySelector('[data-count]').value, 10) || 1,
+  }));
+  const readCycle = (dlg) => {
+    const f = formData(dlg);
+    return { messages_per_cycle: f.messages_per_cycle, rest_time_minutes: f.rest_time_minutes, retweet_count: f.retweet_count,
+      max_total_retweets: f.max_total_retweets, media_enabled: !!f.media_enabled };
+  };
+
+  async function settings(username) {
+    const s = await run(() => api('GET', `/api/accounts/${encodeURIComponent(username)}/settings`));
+    if (!s) return;
+    const disabled = Object.keys(s.disabled || {});
+    const dlg = open({
+      title: `Settings · @${username}`, icon: 'sliders', wide: true,
+      body: `<div class="section-title">Cycle</div>${cycleFields(s.cycle)}
+        ${messagesEditor(s.messages)}
+        <div class="section-title">Groups<span class="spacer"></span>
+          <button class="btn sm" data-parse>${I('layers', 13)} Parse now</button><button class="btn sm outline-danger" data-clear>${I('trash-2', 13)} Clear</button></div>
+        <div class="hint">Saved for this account: <b>${s.groups_count}</b> · in cache: <b>${s.chat_cache}</b> · temporarily disabled: <b>${disabled.length}</b>.
+          Groups are collected again from iChat every time mailing starts.
+          ${disabled.length ? `<details><summary>disabled groups</summary><pre class="help">${esc(disabled.map((g) => `${g} — ${s.disabled[g].reason || ''}`).join('\n'))}</pre></details>` : ''}</div>`,
+      buttons: [{ label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() }, {
+        label: 'Save settings', kind: 'primary',
+        onClick: async (d) => {
+          const body = { cycle: readCycle(d), messages: readMessages(d) };
+          if (await run(() => api('PUT', `/api/accounts/${encodeURIComponent(username)}/settings`, body), 'Settings saved and applied')) d.close();
+        },
+      }],
+    });
+    wireMessages(dlg);
+    dlg.body.querySelector('[data-parse]').addEventListener('click', () => run(() => api('POST', '/api/actions/parse', { usernames: [username] }), 'Parsing started'));
+    dlg.body.querySelector('[data-clear]').addEventListener('click', async () => {
+      if (await confirm('Clear groups', `Remove all saved groups for @${username}?`, 'Clear', 'danger')) {
+        run(() => api('POST', '/api/actions/clear_groups', { username }), 'Groups cleared');
+      }
+    });
+  }
+
+  async function massSettings(usernames) {
+    const s = await run(() => api('GET', `/api/accounts/${encodeURIComponent(usernames[0])}/settings`));
+    if (!s) return;
+    const dlg = open({
+      title: `Mass messages · ${usernames.length} accounts`, icon: 'list', wide: true,
+      body: `<div class="grid2"><label class="check"><input name="update_settings" type="checkbox" checked> Update cycle settings</label>
+        <label class="check"><input name="update_messages" type="checkbox" checked> Update messages</label></div>
+        <div class="hint">Cycle values are loaded from @${esc(usernames[0])}. The message list starts empty, so “Append” never copies texts between accounts.</div>
+        <div class="section-title">Cycle</div>${cycleFields(s.cycle)}
+        ${messagesEditor([{ text: '', count: 1 }])}`,
+      buttons: [
+        { label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() },
+        { label: 'Append to existing', kind: 'ok', onClick: (d) => submitMass(d, 'append') },
+        { label: 'Overwrite all', kind: 'danger', onClick: (d) => submitMass(d, 'overwrite') },
+      ],
+    });
+    wireMessages(dlg);
+    async function submitMass(d, mode) {
+      const f = formData(d);
+      const body = { usernames, mode, update_settings: !!f.update_settings, update_messages: !!f.update_messages, cycle: readCycle(d), messages: readMessages(d) };
+      const hasText = body.messages.some((m) => m.text.trim());
+      if (mode === 'overwrite' && body.update_messages && !hasText) {
+        if (!await confirm('Empty message list', 'This will delete all messages on the selected accounts. Continue?', 'Delete messages', 'danger')) return;
+      }
+      const q = mode === 'append' ? `Append the new messages to ${usernames.length} accounts? Existing messages stay.`
+        : `Overwrite settings on ${usernames.length} accounts? Existing messages will be deleted.`;
+      if (!await confirm(mode === 'append' ? 'Append' : 'Overwrite', q, mode === 'append' ? 'Append' : 'Overwrite', mode === 'append' ? 'ok' : 'danger')) return;
+      if (await run(() => api('POST', '/api/settings/mass', body), (x) => `${mode === 'append' ? 'Appended to' : 'Overwritten on'} ${x.updated} account(s)`)) d.close();
+    }
+  }
+
+  async function comments(username) {
+    const c = await run(() => api('GET', `/api/accounts/${encodeURIComponent(username)}/comments`));
+    if (!c) return;
+    open({
+      title: `Comments · @${username}`, icon: 'message-circle',
+      body: `<label class="check"><input name="enabled" type="checkbox" ${c.enabled ? 'checked' : ''}> Comment during rest time</label>
+        ${field('Targets file (one username per line)', 'targets_file', c.targets_file, { mono: true, placeholder: 'D:\\targets.txt' })}
+        ${field('Comments text file', 'comments_file', c.comments_file, { mono: true, placeholder: 'D:\\comments.txt' })}
+        ${field('Photo folder (random image) or single file', 'photo_path', c.photo_path, { mono: true, placeholder: 'D:\\photos' })}
+        ${field('Daily limit', 'daily_limit', c.daily_limit ?? 0, { type: 'number' })}
+        <div class="hint">Paths are on the machine where X-Genius runs.</div>`,
+      buttons: [{ label: 'Cancel', kind: 'ghost', onClick: (d) => d.close() }, {
+        label: 'Save', kind: 'primary',
+        onClick: async (d) => { if (await run(() => api('PUT', `/api/accounts/${encodeURIComponent(username)}/comments`, formData(d)), 'Comment settings saved')) d.close(); },
+      }],
+    });
+  }
+
+  /* ---------------------------------------------------------------- stats / misc */
+  async function dailyStats(username) {
+    const s = await run(() => api('GET', `/api/stats/daily/${encodeURIComponent(username)}`));
+    if (!s) return;
+    open({
+      title: `Last 24 hours · @${username}`, icon: 'bar-chart-2',
+      body: `<div class="kv"><span>Messages sent, 24 h</span><b>${s.messages_24h}</b><span>Messages this session</span><b>${s.messages_total}</b><span>Comments today</span><b>${s.comments_today}</b></div>`,
+      buttons: [{ label: 'Close', kind: 'primary', onClick: (d) => d.close() }],
+    });
+  }
+
+  function history() {
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const today = new Date();
+    const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+    const dlg = open({
+      title: 'History', icon: 'bar-chart-2', wide: true,
+      body: `<div class="cgroup" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <button class="btn sm" data-q="0,1">Today</button><button class="btn sm" data-q="1,1">Yesterday</button>
+          <button class="btn sm" data-q="7,0">7 days</button><button class="btn sm" data-q="30,0">30 days</button>
+          <span class="spacer"></span>
+          <label class="check sm">From <input name="from" type="date" value="${iso(ago(30))}"></label>
+          <label class="check sm">To <input name="to" type="date" value="${iso(today)}"></label>
+          <button class="btn sm primary" data-refresh>Refresh</button>
+          <a class="btn sm" data-csv href="#" download>${I('download', 13)} CSV</a></div>
+        <div data-table><div class="muted">Loading…</div></div>`,
+      buttons: [{ label: 'Close', kind: 'ghost', onClick: (d) => d.close() }],
+    });
+    const load = async () => {
+      const f = formData(dlg);
+      dlg.body.querySelector('[data-csv]').href = `/api/stats/history.csv?from=${f.from}&to=${f.to}`;
+      const r = await run(() => api('GET', `/api/stats/history?from=${f.from}&to=${f.to}`));
+      if (!r) return;
+      const rows = r.rows.map((x) => `<tr><td>@${esc(x.username)}</td><td>${x.msg_period}</td><td>${x.rt_period}</td><td>${x.comm_period}</td>
+        <td>${x.msg_total}</td><td>${x.rt_total}</td><td>${x.comm_total}</td><td><button class="row-act err" data-del="${esc(x.username)}" title="Delete stats">${I('trash-2', 14)}</button></td></tr>`).join('');
+      const t = r.totals;
+      dlg.body.querySelector('[data-table]').innerHTML = `<table class="stats-table"><thead><tr><th>Account</th><th>Msg · period</th><th>RT · period</th>
+        <th>Comm · period</th><th>Msg · total</th><th>RT · total</th><th>Comm · total</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted">No activity in this period</td></tr>'}
+        <tr class="total"><td>Total</td><td>${t.msg_period}</td><td>${t.rt_period}</td><td>${t.comm_period}</td><td>${t.msg_total}</td><td>${t.rt_total}</td><td>${t.comm_total}</td><td></td></tr></tbody></table>`;
+    };
+    dlg.body.addEventListener('click', async (ev) => {
+      const q = ev.target.closest('[data-q]');
+      const del = ev.target.closest('[data-del]');
+      if (q) {
+        const [days, single] = q.dataset.q.split(',').map(Number);
+        dlg.body.querySelector('[name=from]').value = iso(ago(days));
+        dlg.body.querySelector('[name=to]').value = iso(single ? ago(days) : today);
+        load();
+      } else if (ev.target.closest('[data-refresh]')) {
+        load();
+      } else if (del) {
+        const u = del.dataset.del;
+        if (await confirm('Delete stats', `Permanently delete statistics for @${u}?`, 'Delete', 'danger')) {
+          await run(() => api('DELETE', `/api/stats/${encodeURIComponent(u)}`), 'Stats deleted');
+          load();
+        }
+      }
+    });
+    load();
+  }
+
+  function exportResult(path, content) {
+    return open({
+      title: 'Export chats', icon: 'download', wide: true,
+      body: `<div class="hint">Saved to <code>${esc(path)}</code></div><textarea rows="18" readonly>${esc(content)}</textarea>`,
+      buttons: [{ label: 'Copy', kind: 'ghost', onClick: () => navigator.clipboard.writeText(content).then(() => toast('Copied', 'ok')) },
+        { label: 'Close', kind: 'primary', onClick: (d) => d.close() }],
+    });
+  }
+
+  async function help() {
+    let text = '';
+    try { text = await (await fetch('/api/help')).text(); } catch (e) { text = 'Help is unavailable.'; }
+    open({ title: 'Help', icon: 'help-circle', wide: true, body: `<pre class="help">${esc(text)}</pre>`,
+      buttons: [{ label: 'Close', kind: 'primary', onClick: (d) => d.close() }] });
+  }
+
+  return { open, confirm, addAccount, importAccounts, editAccount, bulkEdit, settings, massSettings, comments, dailyStats, history, exportResult, help };
+})();
+
+</script>
+</body>
+</html>

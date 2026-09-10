@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X-Genius</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===================== OFFLINE (server not reachable) ===================== -->
+<div id="screen-offline" class="screen hidden">
+  <div class="offline">
+    <div class="brand big"><span class="mark"></span>X-Genius</div>
+    <h1>The X-Genius service is not running</h1>
+    <p>This page talks to the local service at <code id="offline-url"></code>. Start it with
+      <code>python main.py</code> on this machine — the page reconnects by itself.</p>
+    <span id="offline-status" class="chip">waiting for connection…</span>
+  </div>
+</div>
+
+<!-- ===================== SETUP (first start) ===================== -->
+<div id="screen-setup" class="screen hidden">
+  <div class="setup">
+    <aside class="setup-side">
+      <div class="brand big"><span class="mark"></span>X-Genius</div>
+      <p>Диспетчерская для рассылок в групповые чаты X. Один раз укажите базовую папку — дальше всё
+        хранится в ней: аккаунты, профили Chrome, логи, статистика.</p>
+      <ul class="setup-req">
+        <li><code>Bro/chrome.exe</code></li>
+        <li><code>Drivers/chromedriver.exe</code></li>
+      </ul>
+    </aside>
+    <form class="setup-form" id="setup-form">
+      <h1>Базовая папка</h1>
+      <label class="field"><span>Путь на этом сервере</span>
+        <input id="setup-dir" class="mono" type="text" placeholder="D:\SoftTwitter" autocomplete="off" spellcheck="false"></label>
+      <label class="check"><input id="setup-create" type="checkbox"> Создать папку, если её нет</label>
+      <div id="setup-msg" class="msg"></div>
+      <button id="setup-go" class="btn primary lg" type="submit">Продолжить</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MAIN ===================== -->
+<div id="screen-main" class="app hidden">
+  <div id="demo-banner" class="banner hidden">Demo data — the X-Genius service is not reachable. Start it with <code>python main.py</code>; this page switches to live data by itself.</div>
+  <header class="topbar">
+    <div class="brand"><span class="mark"></span>X-Genius <span id="version" class="ver"></span></div>
+    <span id="base-dir" class="chip mono" title="Base folder"></span>
+    <span class="spacer"></span>
+    <span id="conn" class="conn" title="connection"><i></i><span>connecting…</span></span>
+    <button id="btn-theme" class="btn icon ghost" title="Theme"></button>
+    <button id="btn-help" class="btn icon ghost" title="Help"></button>
+    <button id="btn-shutdown" class="btn ghost danger-text" title="Close all browsers and exit">Exit</button>
+  </header>
+
+  <section class="board" id="summary"></section>
+
+  <section class="cmdbar">
+    <div class="cgroup"><span class="clabel">Sessions</span>
+      <button class="btn" data-tool="login" data-ic="log-in">Login</button>
+      <button class="btn" data-tool="close" data-ic="lock">Close</button>
+      <button class="btn" data-tool="pause" data-ic="pause">Pause / Resume</button>
+      <button class="btn ghost" data-tool="reset_errors" data-ic="refresh-cw">Reset errors</button>
+      <button class="btn outline-danger" data-tool="close_all" data-ic="power">Close all</button>
+    </div>
+    <div class="cgroup"><span class="clabel">Mailing</span>
+      <button class="btn primary" data-tool="mailing" data-ic="send">Start selected</button>
+      <button class="btn primary" data-tool="mail_ready" data-ic="zap">Start all ready</button>
+      <button class="btn" data-tool="auto_parse" data-ic="layers">Parse groups</button>
+    </div>
+    <div class="cgroup"><span class="clabel">Accounts</span>
+      <button class="btn" data-tool="add" data-ic="plus">Add</button>
+      <button class="btn" data-tool="import" data-ic="upload">Import</button>
+      <button class="btn" data-tool="bulk_edit" data-ic="edit-3">Bulk edit</button>
+      <button class="btn" data-tool="mass_msg" data-ic="list">Mass messages</button>
+      <button class="btn" data-tool="export_chats" data-ic="download">Export chats</button>
+      <button class="btn outline-danger" data-tool="delete" data-ic="trash-2">Delete</button>
+    </div>
+    <div class="cgroup"><span class="clabel">Reports</span>
+      <button class="btn" data-tool="history" data-ic="bar-chart-2">History</button>
+    </div>
+  </section>
+
+  <section class="filters">
+    <label class="search"><span class="ic-slot" data-ic="search"></span>
+      <input id="f-search" type="search" placeholder="Search account, group or proxy" autocomplete="off"></label>
+    <select id="f-group"><option value="">All groups</option></select>
+    <select id="f-status">
+      <option value="">All statuses</option>
+      <option value="active">Ready</option>
+      <option value="mailing">Mailing</option>
+      <option value="paused">Paused</option>
+      <option value="relogin">Need relogin</option>
+      <option value="error">Errors</option>
+      <option value="inactive">Inactive</option>
+    </select>
+    <span id="f-count" class="muted"></span>
+    <span class="spacer"></span>
+    <span id="sel-count" class="chip accent">0 selected</span>
+    <button id="sel-clear" class="btn ghost sm">Clear</button>
+  </section>
+
+  <main class="table-surface">
+    <table id="accounts">
+      <thead>
+        <tr>
+          <th class="c-chk"><input id="chk-all" type="checkbox" title="Select all filtered"></th>
+          <th class="c-idx">#</th>
+          <th>Account</th>
+          <th class="c-status">Status</th>
+          <th>Proxy</th>
+          <th class="num" title="Groups in cache (disabled)">Groups</th>
+          <th class="num" title="Groups left in the current queue">Queue</th>
+          <th class="num" title="Messages: this session / last 24 h">Sent</th>
+          <th class="num">RT</th>
+          <th class="num">Followers</th>
+          <th>Last</th>
+          <th class="c-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty hidden">
+      <div class="empty-mark" data-ic="users"></div>
+      <h2>No accounts yet</h2>
+      <p>Add one account or import a list in the <code>username|auth_token|ct0|proxy|group</code> format.</p>
+      <div class="row"><button class="btn primary" data-tool="add" data-ic="plus">Add account</button>
+        <button class="btn" data-tool="import" data-ic="upload">Import</button></div>
+    </div>
+  </main>
+
+  <section id="logpanel" class="console">
+    <div class="console-head">
+      <span class="clabel light"><span data-ic="terminal"></span> Monitor</span>
+      <input id="log-filter" type="search" placeholder="filter: @user or text" autocomplete="off">
+      <label class="check light sm"><input id="log-autoscroll" type="checkbox" checked> autoscroll</label>
+      <span class="spacer"></span>
+      <button id="log-copy" class="btn ghost sm light" data-ic="copy">Copy</button>
+      <button id="log-clear" class="btn ghost sm light">Clear</button>
+      <button id="log-toggle" class="btn icon ghost light" title="Collapse"></button>
+    </div>
+    <div id="logs" class="logs"></div>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+<div id="toasts"></div>
+
+<script src="icons.js"></script>
+<script src="demo.js"></script>
+<script src="app.js"></script>
+<script src="dialogs.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Python 3.9+ (проверялось на 3.9). Windows: нужны Bro/chrome.exe и Drivers/chromedriver.exe
+# в базовой папке (выбирается при первом запуске, путь сохраняется в paths.json).
+selenium>=4.10
+selenium-stealth>=1.0.6
+aiohttp>=3.9
+pyperclip>=1.8
+psutil>=5.9
+requests>=2.31
+urllib3>=1.26
+
+# Telegram-бот: класс TelegramBotManager в текущих исходниках отсутствует, поэтому пакет
+# нужен только если вы добавите свой модуль бота. Раскомментируйте при необходимости:
+# python-telegram-bot>=20
