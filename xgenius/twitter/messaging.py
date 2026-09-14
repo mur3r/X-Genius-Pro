@@ -7,6 +7,7 @@ import random
 import time
 from typing import Optional
 
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
@@ -32,7 +33,20 @@ from xgenius.core import (
     toasts_indicate_limit,
 )
 from xgenius.models import AccountState
-from xgenius.settings import COMPOSER_WAIT_SECONDS, SEND_VERIFY_SECONDS
+from xgenius.settings import COMPOSER_WAIT_SECONDS, SEND_VERIFY_SECONDS, TYPING_MAX_SECONDS
+
+
+def _typing_summary(st: dict) -> str:
+    """Короткая сводка набора для лога: сколько набрано, за сколько, задержки клавиш."""
+    elapsed = time.monotonic() - st["started"]
+    avg = st["sum_ms"] / st["typed"] if st["typed"] else 0.0
+    s = (f"{st['typed']}/{st['total']} порций за {elapsed:.1f}с "
+         f"(ср. {avg:.0f} мс/клавишу, макс {st['max_ms'] / 1000:.1f}с)")
+    if st["refinds"]:
+        s += f", поле ввода пересоздавалось {st['refinds']} раз"
+    if st["fallback_at"] is not None:
+        s += f", остаток с {st['fallback_at']}-й порции вставлен целиком"
+    return s
 
 
 class MessagingMixin:
@@ -75,7 +89,13 @@ class MessagingMixin:
         box.send_keys(Keys.CONTROL, "a")
         box.send_keys(Keys.BACKSPACE)
 
-    def _type_message_sync(self, browser, text: str, humanizer: Optional[Humanizer], should_stop=None) -> bool:
+    @staticmethod
+    def new_typing_stats(total: int = 0) -> dict:
+        return {"total": total, "typed": 0, "started": time.monotonic(), "sum_ms": 0.0, "max_ms": 0.0,
+                "refinds": 0, "fallback_at": None}
+
+    def _type_message_sync(self, browser, text: str, humanizer: Optional[Humanizer], should_stop=None,
+                           stats: Optional[dict] = None) -> bool:
         """
         Набирает текст как человек. Выполняется целиком в одном потоке executor'а,
         чтобы не дергать event loop на каждый символ.
@@ -87,7 +107,23 @@ class MessagingMixin:
             уходила в FAILED.
         Здесь BMP-символы (буквы, ☭ 卐 ♫ ✰ ...) идут как реальные нажатия клавиш,
         а emoji/склейки — через CDP Input.insertText (для React это обычный ввод).
+
+        Диагностика «сообщение набирается не полностью» (ТЗ, п. 1): каждая клавиша — это
+        HTTP-запрос к chromedriver, и на перегруженном сервере он может идти секунды.
+        В `stats` копится число набранных порций и задержки клавиш — они попадают в лог
+        независимо от того, чем закончился набор. Два известных обрыва набора:
+          * React перерисовал композер (пришло новое сообщение в группу) — элемент
+            «протух» (StaleElementReference); теперь поле ищется заново и набор
+            продолжается с той же позиции, а не падает в RETRY с половиной текста в поле;
+          * набор идёт дольше TYPING_MAX_SECONDS — остаток вставляется одним куском,
+            чтобы сообщение ушло целиком, а не осталось недописанным.
         """
+        chunks = split_for_typing(text)
+        if stats is None:
+            stats = self.new_typing_stats(len(chunks))
+        else:
+            stats["total"] = len(chunks)
+            stats["started"] = time.monotonic()
         box = self._find_composer_sync(browser)
         self._clear_composer_sync(browser, box)
         time.sleep(0.3)
@@ -105,22 +141,56 @@ class MessagingMixin:
             word_pause_range = (0.0, 0.0)
             correction_delay = (0.3, 0.6)
 
-        for kind, payload in split_for_typing(text):
+        def press(kind: str, payload: str) -> None:
+            nonlocal box
+            for attempt in (1, 2):
+                try:
+                    if kind == "newline":
+                        box.send_keys(Keys.SHIFT, Keys.ENTER)
+                    elif kind == "insert":
+                        browser.execute_cdp_cmd("Input.insertText", {"text": payload})
+                    else:
+                        ch = payload
+                        if typo_chance and ch.isalpha() and random.random() < typo_chance:
+                            typo = humanizer._get_typo_char(ch)
+                            if typo != ch:
+                                box.send_keys(typo)
+                                time.sleep(random.uniform(*correction_delay))
+                                box.send_keys(Keys.BACKSPACE)
+                        box.send_keys(ch)
+                    return
+                except StaleElementReferenceException:
+                    if attempt == 2:
+                        raise
+                    # X перерисовал композер — берём новый элемент и повторяем ту же порцию
+                    stats["refinds"] += 1
+                    box = self._find_composer_sync(browser)
+                    try:
+                        browser.execute_script("arguments[0].focus();", box)
+                    except Exception:
+                        pass
+
+        for i, (kind, payload) in enumerate(chunks):
             if should_stop is not None and should_stop():
                 return False
-            if kind == "newline":
-                box.send_keys(Keys.SHIFT, Keys.ENTER)
-            elif kind == "insert":
-                browser.execute_cdp_cmd("Input.insertText", {"text": payload})
-            else:
-                ch = payload
-                if typo_chance and ch.isalpha() and random.random() < typo_chance:
-                    typo = humanizer._get_typo_char(ch)
-                    if typo != ch:
-                        box.send_keys(typo)
-                        time.sleep(random.uniform(*correction_delay))
-                        box.send_keys(Keys.BACKSPACE)
-                box.send_keys(ch)
+
+            if TYPING_MAX_SECONDS and time.monotonic() - stats["started"] > TYPING_MAX_SECONDS:
+                # Сервер не тянет посимвольный набор — дописываем остаток одним куском
+                rest = "".join(p for _, p in chunks[i:])
+                stats["fallback_at"] = i
+                t0 = time.monotonic()
+                press("insert", rest)
+                stats["typed"] = len(chunks)
+                stats["max_ms"] = max(stats["max_ms"], (time.monotonic() - t0) * 1000.0)
+                return True
+
+            t0 = time.monotonic()
+            press(kind, payload)
+            ms = (time.monotonic() - t0) * 1000.0
+            stats["typed"] += 1
+            stats["sum_ms"] += ms
+            if ms > stats["max_ms"]:
+                stats["max_ms"] = ms
 
             delay = random.uniform(*speed)
             if payload in ".!?,:;":
@@ -280,6 +350,7 @@ class MessagingMixin:
         loop = asyncio.get_event_loop()
         chat_id = chat_id_from_url(group_url)
 
+        t_start = time.monotonic()
         try:
             # 1. Переход в чат
             try:
@@ -288,10 +359,14 @@ class MessagingMixin:
                 kind = classify_driver_error(e)
                 if kind == "closed":
                     return BROWSER_CLOSED
-                self.logger.warning(f"Переход в {group_url} не удался ({type(e).__name__}): {str(e)[:120]}", username)
+                self.logger.warning(
+                    f"Переход в {group_url} не удался за {time.monotonic() - t_start:.1f}с "
+                    f"({type(e).__name__}): {str(e)[:120]}", username)
                 if kind != "timeout":
                     return RETRY
                 # таймаут загрузки: страница могла частично отрисоваться — проверим зондом
+            state.parked = False  # мы снова на x.com (после отдыха браузер мог стоять на about:blank)
+            t_loaded = time.monotonic()
 
             # 2. Ждём поле ввода, классифицируя состояние страницы
             verdict, reason = RETRY, "no probe"
@@ -302,6 +377,11 @@ class MessagingMixin:
                 if verdict != RETRY or time.monotonic() >= deadline:
                     break
                 await asyncio.sleep(1.0)
+            t_ready = time.monotonic()
+            # Тайминги загрузки: по ним видно, прокси это (get долгий) или CPU (композер долго не появляется)
+            self.logger.info(
+                f"⏱ чат открыт за {t_loaded - t_start:.1f}с, поле ввода через {t_ready - t_loaded:.1f}с "
+                f"({verdict}{': ' + reason if reason else ''})", username)
 
             if verdict == NEED_RELOGIN:
                 self.logger.warning("Обнаружена страница входа.", username)
@@ -323,11 +403,28 @@ class MessagingMixin:
             if humanizer is not None:
                 humanizer.enabled = True
             should_stop = lambda: not state.is_active
-            typed = await loop.run_in_executor(
-                None, lambda: self._type_message_sync(browser, message_text, humanizer, should_stop))
-            if not typed:
-                self.logger.warning("Набор прерван (аккаунт остановлен).", username)
+            tstats = self.new_typing_stats()
+            try:
+                typed = await loop.run_in_executor(
+                    None, lambda: self._type_message_sync(browser, message_text, humanizer, should_stop, tstats))
+            except Exception as e:
+                # Именно этот случай клиент видит как «набрало первые строки и остановилось»:
+                # половина текста остаётся в поле. Пишем, на какой порции и почему оборвалось.
+                kind = classify_driver_error(e)
+                self.logger.error(
+                    f"⌨ Набор оборван: {_typing_summary(tstats)}; {type(e).__name__}: {str(e)[:160]}", username)
+                if kind == "closed":
+                    return BROWSER_CLOSED
+                try:
+                    await loop.run_in_executor(
+                        None, lambda: self._clear_composer_sync(browser, self._find_composer_sync(browser)))
+                except Exception:
+                    pass
                 return RETRY
+            if not typed:
+                self.logger.warning(f"Набор прерван (аккаунт остановлен): {_typing_summary(tstats)}", username)
+                return RETRY
+            self.logger.info(f"⌨ Набрано: {_typing_summary(tstats)}", username)
 
             await asyncio.sleep(0.8)
 
@@ -355,6 +452,7 @@ class MessagingMixin:
             # 5. Отправка
             sent, why = await self._send_message_button(browser, username, chat_id)
             if sent:
+                self.logger.info(f"⏱ вся отправка заняла {time.monotonic() - t_start:.1f}с", username)
                 await asyncio.sleep(random.uniform(2, 4))
                 return SUCCESS
             if why == "limit":

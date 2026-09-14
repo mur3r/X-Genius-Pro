@@ -30,6 +30,7 @@ from xgenius.models import AccountState
 from xgenius.settings import (
     DM_LIMIT_PAUSE_SECONDS,
     HEALTH_TIMEOUT_STRIKES,
+    IDLE_PARK_SECONDS,
     RECOVERY_MAX_ATTEMPTS,
     SEND_STALL_PAUSE_SECONDS,
     SEND_STALL_THRESHOLD,
@@ -83,6 +84,11 @@ class TaskScheduler:
             account_state.groups = set(all_groups)
             self.account_manager.save_groups()
         return all_groups
+
+    async def _park_for(self, account_state: AccountState, account_manager: AccountManager, seconds: float, why: str) -> None:
+        """Долгая пауза (отдых, лимит DM, стоп после серии ошибок): вкладка x.com не нужна — паркуем."""
+        if IDLE_PARK_SECONDS and seconds >= IDLE_PARK_SECONDS and account_state.browser is not None:
+            await account_manager.park_browser(account_state, why)
 
     async def _recover_browser(self, account_state: AccountState, account_manager: AccountManager, why: str) -> Optional[AccountState]:
         """
@@ -298,6 +304,7 @@ class TaskScheduler:
                                     f"или сбой X. Пауза {SEND_STALL_PAUSE_SECONDS // 60} мин + проверка сессии.", username)
                                 account_state.status_reason = f"SEND STALL {SEND_STALL_PAUSE_SECONDS // 60}M"
                                 self.gui_update_callback()
+                                await self._park_for(account_state, account_manager, SEND_STALL_PAUSE_SECONDS, "пауза после серии ошибок")
                                 await asyncio.sleep(SEND_STALL_PAUSE_SECONDS)
                                 account_state.status_reason = ""
                                 unconfirmed_streak = 0
@@ -311,6 +318,7 @@ class TaskScheduler:
                             self.logger.warning(f"🛑 ДОСТИГНУТ ЛИМИТ DM! Пауза {DM_LIMIT_PAUSE_SECONDS // 3600} ч...", username)
                             account_state.status_reason = f"DM LIMIT {DM_LIMIT_PAUSE_SECONDS // 3600}H"
                             self.gui_update_callback()
+                            await self._park_for(account_state, account_manager, DM_LIMIT_PAUSE_SECONDS, "лимит DM")
                             await asyncio.sleep(DM_LIMIT_PAUSE_SECONDS)
                             account_state.status_reason = ""
                             unconfirmed_streak = 0
@@ -444,6 +452,7 @@ class TaskScheduler:
                     remaining_rest = rest_time_seconds - time_spent_commenting
                     if remaining_rest > 0:
                         self.logger.info(f"Отдыхаем оставшиеся {remaining_rest:.1f}с...", username)
+                        await self._park_for(account_state, account_manager, remaining_rest, "отдых между циклами")
                         await asyncio.sleep(remaining_rest)
                     else:
                         self.logger.info("Комментирование заняло больше времени, чем отдых. Начинаем следующий цикл сразу.", username)

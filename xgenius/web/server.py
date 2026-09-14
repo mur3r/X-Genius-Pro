@@ -120,6 +120,22 @@ class WebApp:
     async def api_help(self, request):
         return web.FileResponse(STATIC_DIR / "help.txt")
 
+    async def api_sysmon(self, request):
+        """Нагрузка сервера: последний замер, история для графиков, разбивка по аккаунтам."""
+        if self.engine is None:
+            return self._json({"enabled": False, "info": {}, "latest": {}, "history": []})
+        return self._json(self.engine.sysmon.payload())
+
+    async def api_sysmon_csv(self, request):
+        """Скачать сегодняшний CSV мониторинга (kind=accounts — разбивку по аккаунтам)."""
+        if self.engine is None:
+            raise ActionError("Движок ещё не запущен")
+        info = self.engine.sysmon.info
+        path = Path(info["accounts_csv"] if request.query.get("kind") == "accounts" else info["csv"])
+        if not path.exists():
+            raise ActionError(f"Файл ещё не создан: {path}")
+        return web.FileResponse(path, headers={"Content-Disposition": f'attachment; filename="{path.name}"'})
+
     async def api_shutdown(self, request):
         self.loop.create_task(self.shutdown())
         return self._json({"ok": True})
@@ -229,6 +245,7 @@ class WebApp:
         await ws.prepare(request)
         last_state = None
         last_seq = 0
+        last_sysmon = 0
         try:
             while not ws.closed and not self._stop.is_set():
                 state = self.state_payload()
@@ -241,6 +258,11 @@ class WebApp:
                     if lines:
                         await ws.send_str(json.dumps({"type": "logs", "seq": seq, "lines": lines}, ensure_ascii=False))
                     last_seq = seq
+                    sm = self.engine.sysmon
+                    if sm.seq != last_sysmon and sm.latest:
+                        # Замер нагрузки идёт отдельным сообщением: состояние таблицы от него не меняется
+                        await ws.send_str(json.dumps({"type": "sysmon", "data": sm.latest}, ensure_ascii=False))
+                        last_sysmon = sm.seq
                     await self.engine.wait_change(0.7)
                 else:
                     await asyncio.sleep(0.7)
@@ -273,6 +295,8 @@ class WebApp:
             web.post("/api/setup", self.api_setup),
             web.get("/api/logs", self.api_logs),
             web.get("/api/help", self.api_help),
+            web.get("/api/sysmon", self.api_sysmon),
+            web.get("/api/sysmon/csv", self.api_sysmon_csv),
             web.post("/api/shutdown", self.api_shutdown),
             web.post("/api/accounts", self.api_accounts_add),
             web.post("/api/accounts/import", self.api_accounts_import),

@@ -142,6 +142,48 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; font-fam
 .empty h2 { font-size: 17px; color: var(--text); }
 .empty .row { display: flex; gap: 8px; margin-top: 10px; }
 
+/* ---- tabs / views ---- */
+.tabs { display: inline-flex; gap: 2px; padding: 3px; margin-left: 6px; border-radius: 10px; background: var(--surface-2); }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font-weight: 500; cursor: pointer; transition: background .12s, color .12s; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(15, 25, 30, .12); }
+.tab-badge { font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.tab-badge:empty { display: none; }
+.tab-badge.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.tab-badge.err { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+.view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* ---- load tab ---- */
+.load { flex: 1; overflow: auto; padding: 0 18px 4px; display: flex; flex-direction: column; gap: 12px; }
+.load .board { margin: 14px 0 0; }
+.load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 1100px) { .load-grid { grid-template-columns: 1fr; } }
+.panel { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.panel-head { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.panel-head select { padding: 3px 8px; font-size: 12px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-2); }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.legend i.dash { background-image: repeating-linear-gradient(90deg, transparent 0 3px, var(--surface) 3px 5px); }
+.note { padding: 14px 16px; margin-top: 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--text-2); }
+.status-line { font-size: 11.5px; padding: 0 2px 8px; }
+.cores { display: grid; grid-template-columns: repeat(auto-fit, minmax(22px, 1fr)); gap: 6px; padding: 12px 14px 8px; }
+.core { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.core .bar { width: 100%; height: 56px; border-radius: 4px; background: var(--surface-2); display: flex; align-items: flex-end; overflow: hidden; }
+.core .bar i { display: block; width: 100%; border-radius: 3px 3px 0 0; transition: height .35s ease; }
+.core span { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.chart { width: 100%; height: 170px; display: block; }
+.chart polyline { fill: none; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-family: var(--mono); font-size: 10px; text-anchor: end; }
+.chart .axis.start { text-anchor: start; }
+.table-wrap { overflow: auto; }
+#load-accounts th:first-child, #load-accounts td:first-child { text-align: left; }
+#load-accounts th:nth-child(2), #load-accounts td:nth-child(2) { text-align: left; }
+#load-accounts td:nth-child(5) { min-width: 150px; }
+.cpubar { position: relative; display: flex; align-items: center; justify-content: flex-end; height: 18px; border-radius: 4px; background: var(--surface-2); overflow: hidden; padding: 0 6px; }
+.cpubar i { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--info) 35%, transparent); transition: width .35s ease; }
+.cpubar span { position: relative; font-family: var(--mono); font-size: 12px; }
+
 /* ---- console (always dark) ---- */
 .console { margin: 12px 18px 14px; border-radius: var(--r-lg); background: var(--console-bg); color: var(--console-text); display: flex; flex-direction: column; height: 224px; border: 1px solid var(--console-line); }
 .console.collapsed { height: auto; }

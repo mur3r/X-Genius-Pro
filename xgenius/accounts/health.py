@@ -8,9 +8,11 @@ from typing import Dict, Optional
 from selenium import webdriver
 
 from xgenius.core import LOCK_PATHS, LOGIN_PATHS, PAGE_PROBE_JS, classify_driver_error, is_x_url
+from datetime import datetime
+
 from xgenius.models import AuthStatus
 from xgenius.process_utils import hard_close_browser, kill_orphan_chrome
-from xgenius.settings import HEALTH_TIMEOUT_STRIKES, IDLE_HEALTH_INTERVAL
+from xgenius.settings import HEALTH_TIMEOUT_STRIKES, IDLE_HEALTH_INTERVAL, IDLE_PARK_SECONDS
 
 
 class HealthMixin:
@@ -67,12 +69,35 @@ class HealthMixin:
         except Exception:
             pass
 
+    async def park_browser(self, state, why: str) -> bool:
+        """
+        Уводит браузер на about:blank. Открытая вкладка x.com даже без действий держит
+        WebSocket, таймеры и перерисовки React — на сервере без GPU это заметная доля CPU
+        на каждый из 50 браузеров. Сессия (куки, профиль) при этом не теряется: любое
+        следующее действие (парсинг, рассылка, проверка авторизации) само открывает x.com.
+        """
+        browser = state.browser
+        if browser is None or state.parked:
+            return False
+        loop = asyncio.get_event_loop()
+        try:
+            await loop.run_in_executor(None, lambda: browser.get("about:blank"))
+        except Exception as e:
+            if classify_driver_error(e) == "closed":
+                return False
+            self.logger.warning(f"Парковка браузера не удалась: {type(e).__name__}", state.username)
+            return False
+        state.parked = True
+        self.logger.info(f"Браузер припаркован на about:blank ({why}) — снимаем нагрузку с CPU.", state.username)
+        return True
+
     async def idle_health_watchdog(self):
         """
         Фоновая проверка браузеров, которые залогинены, но НЕ в рассылке (в рассылке
         цикл проверяет сам). Заменяет GUI.check_all_browsers(), который дергал Selenium
         из GUI-потока каждые 1.5 с для всех аккаунтов и подвешивал интерфейс.
         Три таймаута подряд = браузер считается мёртвым и закрывается принудительно.
+        Простаивающий дольше IDLE_PARK_SECONDS браузер паркуется на about:blank.
         """
         strikes: Dict[str, int] = {}
         while True:
@@ -85,6 +110,9 @@ class HealthMixin:
                     status = await self.check_browser_health_detailed(state.browser)
                     if status == "OK":
                         strikes.pop(username, None)
+                        if (IDLE_PARK_SECONDS and not state.parked and not state.is_parsing
+                                and (datetime.now() - state.last_action_time).total_seconds() >= IDLE_PARK_SECONDS):
+                            await self.park_browser(state, f"простой {IDLE_PARK_SECONDS // 60} мин")
                         continue
                     if status == "TIMEOUT":
                         strikes[username] = strikes.get(username, 0) + 1
@@ -128,8 +156,10 @@ class HealthMixin:
             return AuthStatus.PAGE_DOWN
 
         if not is_x_url(current_url):
-            # Сеть/прокси/пустая вкладка — это НЕ разлогин. Пробуем вернуться домой один раз.
-            self.logger.warning(f"[AUTH_CHECK] Не на x.com ({current_url[:80]}). Пробуем открыть /home.")
+            # Сеть/прокси/пустая вкладка (в т.ч. припаркованный about:blank) — это НЕ разлогин.
+            # Пробуем вернуться домой один раз.
+            if current_url != "about:blank":
+                self.logger.warning(f"[AUTH_CHECK] Не на x.com ({current_url[:80]}). Пробуем открыть /home.")
             try:
                 await loop.run_in_executor(None, lambda: browser.get("https://x.com/home"))
                 await asyncio.sleep(3)
@@ -194,8 +224,9 @@ class HealthMixin:
             await self.send_telegram_error(lock_reason.split()[0], username, lock_reason)
             return True
         
-        # 2. Комплексная проверка состояния
+        # 2. Комплексная проверка состояния (может открыть /home — браузер больше не припаркован)
         auth_status = await self._check_auth_state(state.browser)
+        state.parked = False
 
         if auth_status == AuthStatus.NEED_RELOGIN:
             self.logger.warning(f"Потеряна сессия. Требуется перелогин.", username)

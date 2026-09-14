@@ -156,8 +156,15 @@ class SettingsActions:
         if not st or not st.browser:
             raise ActionError(f"Browser for {username} is not open!")
         browser = st.browser
+        parked = st.parked
 
         def _front():
+            if parked:
+                # Припаркованный браузер стоит на about:blank — оператору нужен x.com
+                try:
+                    browser.get("https://x.com/home")
+                except Exception:
+                    pass
             try:
                 rect = browser.get_window_rect()
                 if rect["x"] < -1000 or rect["y"] < -1000:
@@ -171,6 +178,7 @@ class SettingsActions:
             browser.switch_to.window(browser.current_window_handle)
 
         await self.e.loop.run_in_executor(None, _front)
+        st.parked = False
 
     # ------------------------------------------------------------------ stats
     def daily_stats(self, username: str) -> dict:

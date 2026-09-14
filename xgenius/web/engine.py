@@ -5,7 +5,6 @@ TaskScheduler по-прежнему получают ссылку на "gui_inst
 с теми же атрибутами (telegram_bot_instance, update_account_table_threadsafe).
 """
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -19,6 +18,7 @@ from xgenius.process_utils import kill_orphan_chrome
 from xgenius.scheduler import TaskScheduler
 from xgenius.settings import EXECUTOR_MAX_WORKERS
 from xgenius.stats import StatsManager
+from xgenius.sysmon import CountingExecutor, SystemMonitor
 from xgenius.twitter.operations import TwitterOperations
 
 # Статусы, которые считаем "ошибкой" в сводке (всё, кроме служебных пауз/восстановления)
@@ -42,8 +42,11 @@ class Engine:
         self.task_scheduler = TaskScheduler(self.logger, self.notify, self.account_manager)
         self.account_manager.set_gui_instance(self)
 
-        # Пул потоков для блокирующих вызовов Selenium (>= число аккаунтов)
-        self.loop.set_default_executor(ThreadPoolExecutor(max_workers=EXECUTOR_MAX_WORKERS, thread_name_prefix="xg"))
+        # Пул потоков для блокирующих вызовов Selenium (>= число аккаунтов). CountingExecutor
+        # считает вызовы в работе и их длительность — это видно на вкладке Load и в [SYSMON].
+        self.executor = CountingExecutor(max_workers=EXECUTOR_MAX_WORKERS, thread_name_prefix="xg")
+        self.loop.set_default_executor(self.executor)
+        self.sysmon = SystemMonitor(self, self.executor)
         try:
             killed = kill_orphan_chrome(self.config.browser_profiles_dir)
             if killed:
@@ -54,6 +57,7 @@ class Engine:
         self._changed = asyncio.Event()
         self._tasks: List[asyncio.Task] = [
             self.loop.create_task(self.account_manager.idle_health_watchdog()),
+            self.loop.create_task(self.sysmon.run()),
         ]
         self.logger.warning("Telegram bot: модуль TelegramBotManager отсутствует в сборке — бот не запущен.")
         self.logger.info(f"X-Genius {__version__}: движок запущен, база: {self.config.base_dir}")
@@ -116,6 +120,7 @@ class Engine:
                 "is_parsing": bool(st and st.is_parsing),
                 "need_relogin": bool(st and st.need_relogin),
                 "has_browser": bool(st and st.browser),
+                "parked": bool(st and st.browser and st.parked),
                 "running": u in running,
                 "messages_sent": st.messages_sent if st else 0,
                 "msg_24h": self.stats_manager.get_stats_for_24h(u),
@@ -161,6 +166,7 @@ class Engine:
             "groups": groups,
             "accounts": rows,
             "log_seq": self.logger.seq,
+            "sysmon_enabled": self.sysmon.enabled,
         }
 
     def logs_since(self, seq: int) -> Tuple[int, List[str]]:

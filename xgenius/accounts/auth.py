@@ -125,6 +125,7 @@ class AuthMixin:
 
         account_state.need_relogin = False
         account_state.status_reason = ""
+        account_state.parked = False
 
         loop = asyncio.get_event_loop()
 

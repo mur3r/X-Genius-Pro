@@ -122,6 +122,7 @@ class Actions(SettingsActions):
             return False
         self._busy.add(username)
         st.is_parsing = True
+        st.parked = False  # find_groups сам откроет x.com/i/chat
         self.e.notify()
         try:
             self._log("Starting to parse groups...", username)
@@ -178,6 +179,7 @@ class Actions(SettingsActions):
             return False, "Mailing is already running for this account."
         st.is_mailing = True
         st.is_paused = False
+        st.parked = False  # цикл рассылки сам открывает нужные страницы x.com
         self._log("Starting mailing process... Группы будут собраны автоматически из iChat.", username)
         self.e.task_scheduler.start_account_cycle(st, self.e.twitter_ops, self.am, humanize=True)
         self.e.notify()

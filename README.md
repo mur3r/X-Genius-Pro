@@ -108,6 +108,11 @@ python -m unittest discover -s tests -v
 - Таблица аккаунтов с поиском, фильтром по группе и статусу; в строке — Login, View, Parse, Mail,
   Pause/Resume, Settings, Comments, Edit, 24h stats, Close, Delete.
 - Monitor — живой лог внизу (фильтр по `@user` или тексту, копирование).
+- Вкладка **Load** (переключатель Accounts / Load в верхней панели) — нагрузка сервера в реальном времени:
+  CPU по ядрам, RAM, процессы Chrome с разбивкой по аккаунтам, занятость пула потоков Selenium и длительность
+  команд к chromedriver, лаг event loop, графики за последний час, кнопки скачивания CSV. Те же данные
+  пишутся в `logs/sysmon_<дата>.csv` (каждые 5 с) и `logs/sysmon_accounts_<дата>.csv` (раз в минуту),
+  а в основной лог раз в минуту попадает строка `[SYSMON] …` (см. `ANALYSIS.md`, раздел 9).
 - Состояние и логи приходят по WebSocket; при разрыве соединения страница переподключается сама.
 - Если сервис недоступен, страница показывает демо-данные с жёлтой плашкой «Demo data» и переключается на живые,
   как только сервис поднимется. Посмотреть дизайн без сервиса: открыть `xgenius/web/static/preview.html`
@@ -135,6 +140,7 @@ xgenius/
   browser.py                BrowserManager: создание Chrome, флаги, прокси, CDP-блокировка медиа
   cookies.py                куки аккаунта (файл + БД), лог logstest
   process_utils.py          hard_close_browser, kill_orphan_chrome, force_kill_chromedrivers
+  sysmon.py                 SystemMonitor: CPU/RAM/процессы Chrome по аккаунтам, пул потоков, лаг loop → CSV + вкладка Load
   license.py                verify_license (Google-таблица)
   text_utils.py             уникализация текста, emoji, leetspeak, экранирование
   telegram_utils.py         safe_send_message и др. (для Telegram-бота)
@@ -145,6 +151,7 @@ xgenius/
     page_state.py           статусы, JS-зонды, classify_page, classify_driver_error
     chat_store.py           ChatStore: кеш/очередь/страйки/отключённые группы
     typing_split.py         split_for_typing: BMP-символы клавишами, emoji через CDP
+    procinfo.py             какому аккаунту принадлежит процесс Chrome, строка [SYSMON] для лога
 
   accounts/                 AccountManager = manager.py + миксины
     manager.py              состояние аккаунтов, файлы, токены, экспорт чатов
@@ -164,7 +171,8 @@ xgenius/
     static/index.html       страница
     static/style.css        стили (тёмная/светлая тема)
     static/icons.js         SVG-иконки
-    static/app.js           состояние, WebSocket, сводка, таблица, консоль, действия панели
+    static/app.js           состояние, WebSocket, сводка, таблица, консоль, действия панели, вкладки
+    static/load.js          вкладка Load: плитки, ядра, графики (inline SVG), таблица по аккаунтам
     static/dialogs.js       модальные окна: аккаунт, импорт, bulk edit, настройки, комментарии, история
     static/help.txt         текст справки
 ```
@@ -193,7 +201,9 @@ xgenius/
 `POST /api/accounts`, `POST /api/accounts/import`, `GET|PUT /api/accounts/{u}`, `POST /api/accounts/delete`,
 `POST /api/accounts/bulk_edit`, `GET|PUT /api/accounts/{u}/settings`, `POST /api/settings/mass`,
 `GET|PUT /api/accounts/{u}/comments`, `POST /api/actions/{login|parse|mailing|pause|close|view|reset_errors|clear_groups|export_chats}`,
-`GET /api/stats/daily/{u}`, `GET /api/stats/history[.csv]?from=&to=`, `DELETE /api/stats/{u}`, `POST /api/shutdown`.
+`GET /api/stats/daily/{u}`, `GET /api/stats/history[.csv]?from=&to=`, `DELETE /api/stats/{u}`, `POST /api/shutdown`,
+`GET /api/sysmon` (последний замер нагрузки + история), `GET /api/sysmon/csv[?kind=accounts]` (CSV за сегодня);
+по WebSocket дополнительно приходят сообщения `{"type": "sysmon"}` с каждым замером.
 
 ## Известные ограничения
 

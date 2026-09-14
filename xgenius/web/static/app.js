@@ -4,7 +4,7 @@
 
 const S = {
   phase: null, data: null, selected: new Set(),
-  q: '', group: '', status: '',
+  q: '', group: '', status: '', tab: 'accounts',
   logs: [], logFilter: '', autoscroll: true, ws: null, connected: false,
 };
 
@@ -123,6 +123,7 @@ function rowHtml(a) {
     a.has_token ? '' : '<span class="tag" title="no auth token">no token</span>',
     a.has_messages ? '' : '<span class="tag" title="no mailing messages">no messages</span>',
     a.disabled_groups ? `<span class="tag" title="groups disabled after strikes">${a.disabled_groups} off</span>` : '',
+    a.parked ? '<span class="tag" title="browser idles on about:blank to save CPU; any action reopens x.com">parked</span>' : '',
   ].join('');
   const pause = a.is_mailing
     ? act('pause', a.is_paused ? 'play' : 'pause', a.is_paused ? 'Resume' : 'Pause', { cls: a.is_paused ? 'ok' : 'warn' })
@@ -183,7 +184,18 @@ function applyState(data) {
     renderBoard();
     renderGroupFilter();
     renderTable();
+    if ('sysmon_enabled' in data) Load.setEnabled(data.sysmon_enabled !== false);
   }
+}
+
+/* ------------------------------------------------------------------ tabs */
+function setTab(name) {
+  S.tab = name;
+  $$('#tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  $('#view-accounts').classList.toggle('hidden', name !== 'accounts');
+  $('#view-load').classList.toggle('hidden', name !== 'load');
+  if (name === 'load') Load.activate(); else Load.deactivate();
+  try { localStorage.setItem('xg-tab', name); } catch (e) { /* ignore */ }
 }
 
 /* ------------------------------------------------------------------ console */
@@ -230,6 +242,7 @@ function connect() {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'state') applyState(msg.data);
     else if (msg.type === 'logs') appendLogs(msg.lines || []);
+    else if (msg.type === 'sysmon') Load.onSample(msg.data);
   };
   ws.onclose = () => { setConnected(false); showOffline('service unreachable — retrying every 2 s'); setTimeout(connect, 2000); };
   ws.onerror = () => ws.close();
@@ -328,6 +341,8 @@ function bindEvents() {
   $('#f-group').addEventListener('change', (ev) => { S.group = ev.target.value; renderTable(); });
   $('#f-status').addEventListener('change', (ev) => { S.status = ev.target.value; renderTable(); });
   $$('[data-tool]').forEach((b) => b.addEventListener('click', () => TOOL_ACTIONS[b.dataset.tool]()));
+  $$('#tabs .tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
+  $('#acc-sort').addEventListener('change', (ev) => Load.setSort(ev.target.value));
 
   $('#log-filter').addEventListener('input', (ev) => { S.logFilter = ev.target.value; rerenderLogs(); });
   $('#log-autoscroll').addEventListener('change', (ev) => { S.autoscroll = ev.target.checked; });
@@ -370,6 +385,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#log-toggle').innerHTML = I('chevron-down');
   paintThemeButton();
   bindEvents();
+  let tab = 'accounts';
+  try { tab = localStorage.getItem('xg-tab') || 'accounts'; } catch (e) { /* ignore */ }
+  setTab(tab === 'load' ? 'load' : 'accounts');
   refreshState();
   connect();
 });

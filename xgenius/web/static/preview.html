@@ -151,6 +151,48 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; font-fam
 .empty h2 { font-size: 17px; color: var(--text); }
 .empty .row { display: flex; gap: 8px; margin-top: 10px; }
 
+/* ---- tabs / views ---- */
+.tabs { display: inline-flex; gap: 2px; padding: 3px; margin-left: 6px; border-radius: 10px; background: var(--surface-2); }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font-weight: 500; cursor: pointer; transition: background .12s, color .12s; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(15, 25, 30, .12); }
+.tab-badge { font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.tab-badge:empty { display: none; }
+.tab-badge.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.tab-badge.err { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+.view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* ---- load tab ---- */
+.load { flex: 1; overflow: auto; padding: 0 18px 4px; display: flex; flex-direction: column; gap: 12px; }
+.load .board { margin: 14px 0 0; }
+.load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 1100px) { .load-grid { grid-template-columns: 1fr; } }
+.panel { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.panel-head { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.panel-head select { padding: 3px 8px; font-size: 12px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-2); }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.legend i.dash { background-image: repeating-linear-gradient(90deg, transparent 0 3px, var(--surface) 3px 5px); }
+.note { padding: 14px 16px; margin-top: 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--text-2); }
+.status-line { font-size: 11.5px; padding: 0 2px 8px; }
+.cores { display: grid; grid-template-columns: repeat(auto-fit, minmax(22px, 1fr)); gap: 6px; padding: 12px 14px 8px; }
+.core { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.core .bar { width: 100%; height: 56px; border-radius: 4px; background: var(--surface-2); display: flex; align-items: flex-end; overflow: hidden; }
+.core .bar i { display: block; width: 100%; border-radius: 3px 3px 0 0; transition: height .35s ease; }
+.core span { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.chart { width: 100%; height: 170px; display: block; }
+.chart polyline { fill: none; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-family: var(--mono); font-size: 10px; text-anchor: end; }
+.chart .axis.start { text-anchor: start; }
+.table-wrap { overflow: auto; }
+#load-accounts th:first-child, #load-accounts td:first-child { text-align: left; }
+#load-accounts th:nth-child(2), #load-accounts td:nth-child(2) { text-align: left; }
+#load-accounts td:nth-child(5) { min-width: 150px; }
+.cpubar { position: relative; display: flex; align-items: center; justify-content: flex-end; height: 18px; border-radius: 4px; background: var(--surface-2); overflow: hidden; padding: 0 6px; }
+.cpubar i { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--info) 35%, transparent); transition: width .35s ease; }
+.cpubar span { position: relative; font-family: var(--mono); font-size: 12px; }
+
 /* ---- console (always dark) ---- */
 .console { margin: 12px 18px 14px; border-radius: var(--r-lg); background: var(--console-bg); color: var(--console-text); display: flex; flex-direction: column; height: 224px; border: 1px solid var(--console-line); }
 .console.collapsed { height: auto; }
@@ -262,6 +304,10 @@ pre.help { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; lin
   <header class="topbar">
     <div class="brand"><span class="mark"></span>X-Genius <span id="version" class="ver"></span></div>
     <span id="base-dir" class="chip mono" title="Base folder"></span>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="accounts" data-ic="users">Accounts</button>
+      <button class="tab" data-tab="load" data-ic="activity">Load <span id="tab-load-badge" class="tab-badge"></span></button>
+    </nav>
     <span class="spacer"></span>
     <span id="conn" class="conn" title="connection"><i></i><span>connecting…</span></span>
     <button id="btn-theme" class="btn icon ghost" title="Theme"></button>
@@ -269,6 +315,7 @@ pre.help { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; lin
     <button id="btn-shutdown" class="btn ghost danger-text" title="Close all browsers and exit">Exit</button>
   </header>
 
+  <div id="view-accounts" class="view">
   <section class="board" id="summary"></section>
 
   <section class="cmdbar">
@@ -344,6 +391,51 @@ pre.help { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; lin
         <button class="btn" data-tool="import" data-ic="upload">Import</button></div>
     </div>
   </main>
+  </div>
+
+  <!-- ===================== LOAD (server resources) ===================== -->
+  <div id="view-load" class="view hidden">
+    <div class="load">
+      <div id="load-disabled" class="note hidden">Load monitoring is switched off (<code>SYSMON_INTERVAL = 0</code> in <code>config/settings.json</code>).</div>
+      <div id="load-waiting" class="note hidden">Waiting for the first sample…</div>
+      <div id="load-body" class="hidden">
+        <section class="board" id="load-tiles"></section>
+        <section class="panel">
+          <div class="panel-head"><span class="clabel"><span data-ic="cpu"></span> Cores</span><span id="cores-sub" class="muted"></span></div>
+          <div id="cores" class="cores"></div>
+        </section>
+        <div class="load-grid">
+          <section class="panel">
+            <div class="panel-head"><span class="clabel">CPU · Chrome · RAM</span><span class="spacer"></span>
+              <span class="legend"><i style="background:var(--accent)"></i>CPU total</span>
+              <span class="legend"><i style="background:var(--info)"></i>Chrome share</span>
+              <span class="legend"><i class="dash" style="background:var(--violet)"></i>RAM used</span></div>
+            <svg id="chart-cpu" class="chart" preserveAspectRatio="none"></svg>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><span class="clabel">Selenium latency · loop lag</span><span class="spacer"></span>
+              <span class="legend"><i style="background:var(--accent)"></i>avg call</span>
+              <span class="legend"><i class="dash" style="background:var(--warn)"></i>max call</span>
+              <span class="legend"><i style="background:var(--err)"></i>loop lag</span></div>
+            <svg id="chart-lat" class="chart" preserveAspectRatio="none"></svg>
+          </section>
+        </div>
+        <section class="panel">
+          <div class="panel-head"><span class="clabel"><span data-ic="users"></span> Per account</span><span id="acc-sub" class="muted"></span>
+            <span class="spacer"></span>
+            <select id="acc-sort" title="Sort">
+              <option value="cpu_raw">by CPU</option><option value="rss_mb">by RAM</option><option value="procs">by processes</option><option value="name">by name</option>
+            </select>
+            <a class="btn sm" href="/api/sysmon/csv" download data-ic="download">CSV</a>
+            <a class="btn sm" href="/api/sysmon/csv?kind=accounts" download data-ic="download">Accounts CSV</a></div>
+          <div class="table-wrap"><table class="stats-table" id="load-accounts">
+            <thead><tr><th>Account</th><th>Phase</th><th>Processes</th><th>Threads</th><th>CPU share</th><th>CPU raw</th><th>RAM, MB</th></tr></thead>
+            <tbody></tbody></table></div>
+        </section>
+        <div id="load-status" class="muted mono status-line"></div>
+      </div>
+    </div>
+  </div>
 
   <section id="logpanel" class="console">
     <div class="console-head">
@@ -401,6 +493,8 @@ const ICONS = {
   'check': '<polyline points="20 6 9 17 4 12"/>',
   'alert': '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   'folder': '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  'activity': '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  'cpu': '<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
 };
 
 function I(name, size = 15) {
@@ -438,7 +532,7 @@ const DEMO_STATE = {
   groups: ['Alpha', 'Beta'],
   accounts: [
     demoAccount(1, 'crypto_ann', 'Alpha', 'MAILING', '#3498DB', { is_mailing: true, running: true }),
-    demoAccount(2, 'max_trades', 'Alpha', 'ACTIVE', '#27ae60'),
+    demoAccount(2, 'max_trades', 'Alpha', 'ACTIVE', '#27ae60', { parked: true }),
     demoAccount(3, 'lena_nft', 'Beta', 'PAUSED', '#f39c12', { is_mailing: true, is_paused: true, running: true }),
     demoAccount(4, 'dm_bot_44', 'Beta', 'NEED RELOGIN', '#9b59b6', { need_relogin: true, is_active: false, status_reason: 'RELOGIN' }),
     demoAccount(5, 'old_acc', '', 'SUSPENDED', '#c0392b', { is_active: false, has_browser: false, status_reason: 'SUSPENDED', has_messages: false }),
@@ -453,12 +547,16 @@ const DEMO_LOGS = [
   '[12:02:30] @lena_nft - Paused mailing for lena_nft',
   '[12:03:01] @old_acc - Ошибка входа: SUSPENDED',
   '[12:03:10]  - Telegram bot: модуль TelegramBotManager отсутствует в сборке — бот не запущен.',
+  '[12:03:20] @crypto_ann - ⏱ чат открыт за 6.2с, поле ввода через 3.1с (OK)',
+  '[12:04:05] @crypto_ann - ⌨ Набрано: 212/212 порций за 44.8с (ср. 118 мс/клавишу, макс 2.3с)',
+  '[12:04:10]  - [SYSMON] CPU 96% (ядер >90%: 29/32) · RAM 41/128 GB · Chrome 412 проц/14870 потоков = 74% CPU, 38.1 GB · Python 1%, потоков 140 · Selenium: в работе 41/128, вызовов 812, ср. 820 мс, макс 6.1 с · loop lag 12 мс · браузеров 50 (mailing 30, parsing 5)',
 ];
 
 function enterDemo() {
   S.demo = true;
   applyState(DEMO_STATE);
   appendLogs(DEMO_LOGS);
+  Load.demo();
   document.getElementById('demo-banner').classList.remove('hidden');
 }
 
@@ -466,8 +564,223 @@ function leaveDemo() {
   S.demo = false;
   S.logs = [];
   rerenderLogs();
+  Load.reset();
   document.getElementById('demo-banner').classList.add('hidden');
 }
+
+</script>
+<script>
+/* ---- load.js ---- */
+/* X-Genius web UI — Load tab: CPU per core, RAM, Chrome processes per account, Selenium thread pool,
+   event-loop lag. Data: {type:'sysmon'} WebSocket messages (one sample) and GET /api/sysmon (history).
+   Uses $, esc, api, toast from app.js and I() from icons.js (all called at runtime, after those scripts load). */
+'use strict';
+
+const Load = (() => {
+  const L = { info: {}, latest: null, history: [], enabled: true, active: false, loaded: false, sort: 'cpu' };
+
+  const PHASE_COLOR = { mailing: 'info', parsing: 'violet', paused: 'warn', relogin: 'violet', idle: 'ok', browser: 'muted', webui: 'muted', driver: 'muted', unknown: 'muted', inactive: 'muted' };
+  const PHASE_LABEL = { mailing: 'MAILING', parsing: 'PARSING', paused: 'PAUSED', relogin: 'RELOGIN', idle: 'IDLE', browser: 'BROWSER', webui: 'UI WINDOW', driver: 'DRIVERS', unknown: 'UNKNOWN', inactive: 'INACTIVE' };
+
+  const pct = (v) => (v == null ? '—' : `${Math.round(v)}%`);
+  const ms = (v) => (v == null ? '—' : v >= 1000 ? `${(v / 1000).toFixed(1)} s` : `${Math.round(v)} ms`);
+  const gb = (v) => (v == null ? '—' : `${v.toFixed(v < 10 ? 1 : 0)} GB`);
+  const level = (v, warn, err) => (v == null ? null : v >= err ? 'err' : v >= warn ? 'warn' : null);
+  const capacity = () => Math.max(20, Math.round(((L.info.history_minutes || 60) * 60) / (L.info.interval || 5)));
+
+  /* ---------------------------------------------------------------- tiles */
+  function renderTiles(s) {
+    const tile = (label, value, sub, color) => `<div class="tile" ${color ? `style="--tc:var(--${color})"` : ''}>
+      <span class="l">${label}</span><span class="v">${value}</span><span class="s">${sub}</span></div>`;
+    const c = s.cpu, m = s.mem, ch = s.chrome, py = s.python, ex = s.executor, en = s.engine;
+    const exFull = ex.max && ex.inflight != null && ex.inflight >= ex.max;
+    $('#load-tiles').innerHTML = [
+      tile('CPU', pct(c.total), `${c.busy_cores} of ${c.count} threads over 90%`, level(c.total, 75, 90)),
+      tile('Chrome', pct(ch.cpu), `${ch.procs} processes · ${gb(ch.rss_gb)}`, level(ch.cpu, 60, 80)),
+      tile('RAM', gb(m.used_gb), `of ${gb(m.total_gb)} · ${pct(m.pct)}`, level(m.pct, 80, 90)),
+      tile('Selenium', `${ex.inflight ?? '—'}<span class="dim"> / ${ex.max ?? '—'}</span>`,
+        `avg ${ms(ex.avg_ms)} · max ${ms(ex.max_ms)} · ${ex.calls ?? 0} calls`, exFull ? 'err' : level(ex.avg_ms, 1500, 4000)),
+      tile('Loop lag', ms(s.loop_lag_ms), 'event loop, worst in interval', level(s.loop_lag_ms, 300, 1000)),
+      tile('Python', pct(py.cpu), `${py.threads} threads · ${py.rss_mb} MB`),
+      tile('Browsers', en.browsers, `${en.mailing} mailing · ${en.parsing} parsing · ${en.idle} idle`),
+    ].join('');
+  }
+
+  /* ---------------------------------------------------------------- cores */
+  function renderCores(s) {
+    const cores = s.cpu.cores || [];
+    $('#cores').innerHTML = cores.map((v, i) => {
+      const lv = v >= 90 ? 'err' : v >= 70 ? 'warn' : v >= 40 ? 'info' : 'ok';
+      return `<div class="core" title="core ${i}: ${v}%"><div class="bar"><i style="height:${Math.max(2, v)}%;background:var(--${lv})"></i></div><span>${i}</span></div>`;
+    }).join('');
+    $('#cores-sub').textContent = `${s.cpu.physical} cores / ${s.cpu.count} threads · max core ${pct(s.cpu.max_core)}`
+      + (s.cpu.load1 != null ? ` · load ${s.cpu.load1}` : '');
+  }
+
+  /* ---------------------------------------------------------------- charts (inline SVG, no libs) */
+  function polyline(values, W, H, pad, maxY, cap) {
+    const n = values.length;
+    if (!n) return '';
+    const step = (W - pad.l - pad.r) / Math.max(1, cap - 1);
+    return values.map((v, i) => {
+      const x = pad.l + i * step;
+      const y = pad.t + (H - pad.t - pad.b) * (1 - Math.min(1, Math.max(0, (v ?? 0) / maxY)));
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
+  function chart(svgId, series, maxY, unit) {
+    const svg = $(svgId);
+    const W = 600, H = 170, pad = { l: 34, r: 8, t: 8, b: 18 };
+    const cap = capacity();
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+      const y = pad.t + (H - pad.t - pad.b) * (1 - f);
+      const label = unit === '%' ? `${Math.round(maxY * f)}%` : ms(maxY * f);
+      return `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y}" y2="${y}" class="grid"/><text x="${pad.l - 5}" y="${y + 3.5}" class="axis">${label}</text>`;
+    }).join('');
+    const lines = series.map((sr) => `<polyline points="${polyline(sr.values, W, H, pad, maxY, cap)}" style="stroke:var(--${sr.color})" ${sr.dashed ? 'stroke-dasharray="4 3"' : ''}/>`).join('');
+    const minutes = Math.round((cap * (L.info.interval || 5)) / 60);
+    const xl = `<text x="${pad.l}" y="${H - 4}" class="axis start">-${minutes} min</text><text x="${W - pad.r}" y="${H - 4}" class="axis">now</text>`;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = grid + xl + lines;
+  }
+  function renderCharts() {
+    const h = L.history;
+    chart('#chart-cpu', [
+      { values: h.map((p) => p.cpu), color: 'accent' },
+      { values: h.map((p) => p.chrome), color: 'info' },
+      { values: h.map((p) => p.mem), color: 'violet', dashed: true },
+    ], 100, '%');
+    const lat = h.map((p) => p.sel_avg ?? 0), lmax = h.map((p) => p.sel_max ?? 0), lag = h.map((p) => p.lag ?? 0);
+    const top = Math.max(500, ...lat, ...lag, ...lmax.map((v) => v / 2));
+    const nice = top <= 1000 ? 1000 : top <= 2500 ? 2500 : top <= 5000 ? 5000 : top <= 10000 ? 10000 : Math.ceil(top / 10000) * 10000;
+    chart('#chart-lat', [
+      { values: lat, color: 'accent' },
+      { values: lmax, color: 'warn', dashed: true },
+      { values: lag, color: 'err' },
+    ], nice, 'ms');
+  }
+
+  /* ---------------------------------------------------------------- accounts */
+  function accountName(a) {
+    if (a.username === '_webui') return '<span class="dim">X-Genius UI window</span>';
+    if (a.username === '_driver') return '<span class="dim">chromedriver processes</span>';
+    if (a.username === '_other') return '<span class="dim">chrome in profiles folder, no account</span>';
+    return `<span class="handle">@${esc(a.username)}</span>`;
+  }
+  function renderAccounts(s) {
+    const rows = (s.accounts || []).slice();
+    const key = L.sort;
+    rows.sort((a, b) => (key === 'name' ? a.username.localeCompare(b.username) : (b[key] ?? 0) - (a[key] ?? 0)));
+    const maxCpu = Math.max(1, ...rows.map((a) => a.cpu_raw || 0));
+    const withProcs = rows.filter((a) => a.procs).length;
+    $('#acc-sub').textContent = `${withProcs} with browsers · CPU share is of the whole machine; raw = sum over cores (100% = one full thread)`;
+    $('#load-accounts tbody').innerHTML = rows.map((a) => {
+      const color = PHASE_COLOR[a.phase] || 'muted';
+      return `<tr>
+        <td>${accountName(a)}</td>
+        <td><span class="pill" style="--st:var(--${color})">${esc(PHASE_LABEL[a.phase] || a.phase.toUpperCase())}</span></td>
+        <td>${a.procs}</td><td>${a.threads}</td>
+        <td><div class="cpubar"><i style="width:${Math.round(((a.cpu_raw || 0) / maxCpu) * 100)}%"></i><span>${a.cpu == null ? '—' : `${a.cpu.toFixed(1)}%`}</span></div></td>
+        <td>${a.cpu_raw == null ? '—' : `${Math.round(a.cpu_raw)}%`}</td>
+        <td>${a.rss_mb}</td></tr>`;
+    }).join('') || '<tr><td colspan="7" class="muted">No Chrome processes yet — log in an account.</td></tr>';
+  }
+
+  /* ---------------------------------------------------------------- render */
+  function renderAll() {
+    const s = L.latest;
+    $('#load-disabled').classList.toggle('hidden', L.enabled);
+    $('#load-body').classList.toggle('hidden', !L.enabled || !s);
+    $('#load-waiting').classList.toggle('hidden', !L.enabled || !!s);
+    if (!L.enabled || !s) return;
+    renderTiles(s);
+    renderCores(s);
+    renderCharts();
+    renderAccounts(s);
+    $('#load-status').textContent = `updated ${s.ts} · every ${L.info.interval || '?'} s · ${L.info.csv || ''}`;
+  }
+  function badge(s) {
+    const b = $('#tab-load-badge');
+    if (!b) return;
+    if (!s || !L.enabled) { b.textContent = ''; b.className = 'tab-badge'; return; }
+    b.textContent = pct(s.cpu.total);
+    b.className = `tab-badge ${level(s.cpu.total, 75, 90) || ''}`;
+  }
+
+  /* ---------------------------------------------------------------- data in */
+  function onSample(s) {
+    L.latest = s;
+    L.history.push({ t: s.t, cpu: s.cpu.total, chrome: s.chrome.cpu, mem: s.mem.pct, lag: s.loop_lag_ms,
+      sel_avg: s.executor.avg_ms, sel_max: s.executor.max_ms, inflight: s.executor.inflight, browsers: s.engine.browsers });
+    const cap = capacity();
+    if (L.history.length > cap) L.history.splice(0, L.history.length - cap);
+    badge(s);
+    if (L.active) renderAll();
+  }
+  async function fetchHistory() {
+    try {
+      const r = await api('GET', '/api/sysmon');
+      L.info = r.info || L.info;
+      L.enabled = r.enabled !== false;
+      L.history = r.history || [];
+      if (r.latest && r.latest.seq) L.latest = r.latest;
+      L.loaded = true;
+    } catch (e) { /* offline / demo: keep what we have */ }
+  }
+  async function activate() {
+    L.active = true;
+    if (!L.loaded && !S.demo) await fetchHistory();
+    badge(L.latest);
+    renderAll();
+  }
+  function deactivate() { L.active = false; }
+  function setEnabled(on) {
+    if (L.enabled === on) return;
+    L.enabled = on;
+    if (L.active) renderAll();
+    badge(L.latest);
+  }
+  function setSort(key) { L.sort = key; if (L.latest && L.active) renderAccounts(L.latest); }
+
+  /* ---------------------------------------------------------------- demo (page opened without the service) */
+  function demo() {
+    const cores = 32, cap = 120;
+    L.info = { cpu_count: cores, cpu_physical: 16, mem_total_gb: 128, interval: 5, history_minutes: 10, csv: 'D:\\SoftTwitter\\logs\\sysmon_20260914.csv' };
+    L.history = [];
+    let cpu = 55;
+    for (let i = 0; i < cap; i++) {
+      cpu = Math.min(99, Math.max(30, cpu + (Math.random() - 0.45) * 6 + (i > 70 ? 0.6 : 0)));
+      L.history.push({ t: i, cpu, chrome: cpu * 0.78, mem: 28 + i * 0.05, lag: 5 + Math.random() * 30 + (cpu > 90 ? 400 : 0),
+        sel_avg: 200 + cpu * 9 + Math.random() * 100, sel_max: 900 + cpu * 40, inflight: Math.round(cpu / 3), browsers: 50 });
+    }
+    const last = L.history[L.history.length - 1];
+    const coreVals = Array.from({ length: cores }, () => Math.round(Math.min(100, Math.max(5, last.cpu + (Math.random() - 0.5) * 50))));
+    const names = ['crypto_ann', 'max_trades', 'lena_nft', 'dm_bot_44', 'tina', 'sultana_hotgirl', 'sultana_hotsex', 'fresh_one'];
+    const phases = ['mailing', 'mailing', 'paused', 'relogin', 'mailing', 'parsing', 'parsing', 'idle'];
+    const accounts = names.map((u, i) => {
+      const raw = Math.round(20 + Math.random() * 90);
+      return { username: u, phase: phases[i], procs: 8 + (i % 3), threads: 240 + i * 17, cpu_raw: raw, cpu: +(raw / cores).toFixed(2), rss_mb: 600 + i * 90 };
+    });
+    accounts.push({ username: '_webui', phase: 'webui', procs: 6, threads: 120, cpu_raw: 3, cpu: 0.09, rss_mb: 210 });
+    L.latest = {
+      seq: cap, t: Date.now() / 1000, ts: new Date().toTimeString().slice(0, 8),
+      cpu: { total: Math.round(last.cpu), user: 70, system: 22, cores: coreVals, max_core: Math.max(...coreVals), busy_cores: coreVals.filter((v) => v >= 90).length, count: cores, physical: 16, load1: 41.3 },
+      mem: { total_gb: 128, used_gb: 41.2, avail_gb: 86.8, pct: 32.2 },
+      chrome: { procs: 412, threads: 14870, cpu_raw: Math.round(last.chrome * cores), cpu: Math.round(last.chrome), rss_gb: 38.1, other_procs: 0, other_cpu: 0 },
+      python: { cpu: 1.2, cpu_raw: 38, rss_mb: 310, threads: 140 },
+      executor: { max: 128, threads: 90, inflight: last.inflight, calls: 812, avg_ms: Math.round(last.sel_avg), max_ms: Math.round(last.sel_max) },
+      loop_lag_ms: Math.round(last.lag),
+      engine: { browsers: 50, mailing: 30, parsing: 5, idle: 15 },
+      accounts,
+    };
+    L.enabled = true;
+    badge(L.latest);
+    if (L.active) renderAll();
+  }
+  function reset() { L.history = []; L.latest = null; L.loaded = false; badge(null); if (L.active) renderAll(); }
+
+  return { onSample, activate, deactivate, setEnabled, setSort, demo, reset, state: L };
+})();
 
 </script>
 <script>
@@ -478,7 +791,7 @@ function leaveDemo() {
 
 const S = {
   phase: null, data: null, selected: new Set(),
-  q: '', group: '', status: '',
+  q: '', group: '', status: '', tab: 'accounts',
   logs: [], logFilter: '', autoscroll: true, ws: null, connected: false,
 };
 
@@ -597,6 +910,7 @@ function rowHtml(a) {
     a.has_token ? '' : '<span class="tag" title="no auth token">no token</span>',
     a.has_messages ? '' : '<span class="tag" title="no mailing messages">no messages</span>',
     a.disabled_groups ? `<span class="tag" title="groups disabled after strikes">${a.disabled_groups} off</span>` : '',
+    a.parked ? '<span class="tag" title="browser idles on about:blank to save CPU; any action reopens x.com">parked</span>' : '',
   ].join('');
   const pause = a.is_mailing
     ? act('pause', a.is_paused ? 'play' : 'pause', a.is_paused ? 'Resume' : 'Pause', { cls: a.is_paused ? 'ok' : 'warn' })
@@ -657,7 +971,18 @@ function applyState(data) {
     renderBoard();
     renderGroupFilter();
     renderTable();
+    if ('sysmon_enabled' in data) Load.setEnabled(data.sysmon_enabled !== false);
   }
+}
+
+/* ------------------------------------------------------------------ tabs */
+function setTab(name) {
+  S.tab = name;
+  $$('#tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  $('#view-accounts').classList.toggle('hidden', name !== 'accounts');
+  $('#view-load').classList.toggle('hidden', name !== 'load');
+  if (name === 'load') Load.activate(); else Load.deactivate();
+  try { localStorage.setItem('xg-tab', name); } catch (e) { /* ignore */ }
 }
 
 /* ------------------------------------------------------------------ console */
@@ -704,6 +1029,7 @@ function connect() {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'state') applyState(msg.data);
     else if (msg.type === 'logs') appendLogs(msg.lines || []);
+    else if (msg.type === 'sysmon') Load.onSample(msg.data);
   };
   ws.onclose = () => { setConnected(false); showOffline('service unreachable — retrying every 2 s'); setTimeout(connect, 2000); };
   ws.onerror = () => ws.close();
@@ -802,6 +1128,8 @@ function bindEvents() {
   $('#f-group').addEventListener('change', (ev) => { S.group = ev.target.value; renderTable(); });
   $('#f-status').addEventListener('change', (ev) => { S.status = ev.target.value; renderTable(); });
   $$('[data-tool]').forEach((b) => b.addEventListener('click', () => TOOL_ACTIONS[b.dataset.tool]()));
+  $$('#tabs .tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
+  $('#acc-sort').addEventListener('change', (ev) => Load.setSort(ev.target.value));
 
   $('#log-filter').addEventListener('input', (ev) => { S.logFilter = ev.target.value; rerenderLogs(); });
   $('#log-autoscroll').addEventListener('change', (ev) => { S.autoscroll = ev.target.checked; });
@@ -844,6 +1172,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#log-toggle').innerHTML = I('chevron-down');
   paintThemeButton();
   bindEvents();
+  let tab = 'accounts';
+  try { tab = localStorage.getItem('xg-tab') || 'accounts'; } catch (e) { /* ignore */ }
+  setTab(tab === 'load' ? 'load' : 'accounts');
   refreshState();
   connect();
 });

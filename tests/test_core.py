@@ -14,6 +14,7 @@ from xgenius import core  # noqa: E402
 from xgenius.core import (  # noqa: E402
     ChatStore, classify_page, classify_driver_error, split_for_typing,
     OK_TO_TYPE, NO_INPUT, RETRY, NEED_RELOGIN, LOCKED, SUCCESS, is_x_url,
+    account_from_cmdline, classify_chrome_process, chrome_role, heartbeat_line,
 )
 
 
@@ -84,6 +85,44 @@ class DriverErrorTests(unittest.TestCase):
 
     def test_other(self):
         self.assertEqual(classify_driver_error(Exception("no such element")), "other")
+
+
+class ProcInfoTests(unittest.TestCase):
+    PROFILES = r"D:\SoftTwitter\browser_profiles"
+    WEBUI = r"D:\SoftTwitter\webui_profile"
+
+    def test_account_from_windows_cmdline(self):
+        cmd = r'"D:\SoftTwitter\Bro\chrome.exe" --type=renderer --user-data-dir=D:\SoftTwitter\browser_profiles\profile_sultana_hotgirl --disable-gpu'
+        self.assertEqual(account_from_cmdline(cmd), "sultana_hotgirl")
+        self.assertEqual(chrome_role("chrome.exe", cmd), "renderer")
+
+    def test_account_from_quoted_and_posix_paths(self):
+        self.assertEqual(account_from_cmdline('--user-data-dir="D:\\x\\browser_profiles\\profile_tina" --foo'), "tina")
+        self.assertEqual(account_from_cmdline("--user-data-dir=/srv/x/browser_profiles/profile_tina"), "tina")
+        self.assertIsNone(account_from_cmdline("chrome.exe --type=gpu-process"))
+
+    def test_classify_ours_webui_foreign(self):
+        ours = classify_chrome_process("chrome.exe", r"chrome.exe --user-data-dir=D:\SoftTwitter\browser_profiles\profile_tina", self.PROFILES, self.WEBUI)
+        self.assertEqual((ours["ours"], ours["account"], ours["role"]), (True, "tina", "browser"))
+        ui = classify_chrome_process("chrome.exe", r"chrome.exe --app=http://127.0.0.1:8765/ --user-data-dir=D:\SoftTwitter\webui_profile", self.PROFILES, self.WEBUI)
+        self.assertEqual((ui["ours"], ui["account"]), (True, "_webui"))
+        foreign = classify_chrome_process("chrome.exe", r"C:\Program Files\Google\Chrome\chrome.exe --type=utility", self.PROFILES, self.WEBUI)
+        self.assertEqual((foreign["ours"], foreign["account"], foreign["role"]), (False, None, "utility"))
+
+    def test_driver_role(self):
+        self.assertEqual(chrome_role("chromedriver.exe", "chromedriver.exe --port=5555"), "driver")
+
+    def test_heartbeat_line_mentions_key_numbers(self):
+        s = {"cpu": {"total": 97.1, "busy_cores": 30, "count": 32}, "mem": {"used_gb": 41.2, "total_gb": 128},
+             "chrome": {"procs": 412, "threads": 14870, "cpu": 71.2, "rss_gb": 38.1, "other_procs": 0, "other_cpu": 0},
+             "python": {"cpu": 12, "threads": 140},
+             "executor": {"inflight": 47, "max": 128, "calls": 812, "avg_ms": 820.4, "max_ms": 6100},
+             "loop_lag_ms": 8, "engine": {"browsers": 50, "mailing": 30, "parsing": 5}}
+        line = heartbeat_line(s)
+        self.assertTrue(line.startswith("[SYSMON]"))
+        for piece in ("CPU 97%", "30/32", "41/128 GB", "412 проц", "47/128", "820 мс", "6.1 с", "браузеров 50"):
+            self.assertIn(piece, line)
+        self.assertNotIn("чужой Chrome", line)
 
 
 class TypingSplitTests(unittest.TestCase):

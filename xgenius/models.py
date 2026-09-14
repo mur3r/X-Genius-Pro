@@ -117,3 +117,4 @@ class AccountState:
     auth_token: Optional[str] = None  # <--- ДОБАВЛЕНО: Токен авторизации
     ct0_token: Optional[str] = None   # <--- ДОБАВЛЕНО: Токен CSRF
     relogin_in_progress: bool = False
+    parked: bool = False  # браузер уведён на about:blank (простой/отдых), чтобы не грузить CPU

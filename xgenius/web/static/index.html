@@ -50,6 +50,10 @@
   <header class="topbar">
     <div class="brand"><span class="mark"></span>X-Genius <span id="version" class="ver"></span></div>
     <span id="base-dir" class="chip mono" title="Base folder"></span>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="accounts" data-ic="users">Accounts</button>
+      <button class="tab" data-tab="load" data-ic="activity">Load <span id="tab-load-badge" class="tab-badge"></span></button>
+    </nav>
     <span class="spacer"></span>
     <span id="conn" class="conn" title="connection"><i></i><span>connecting…</span></span>
     <button id="btn-theme" class="btn icon ghost" title="Theme"></button>
@@ -57,6 +61,7 @@
     <button id="btn-shutdown" class="btn ghost danger-text" title="Close all browsers and exit">Exit</button>
   </header>
 
+  <div id="view-accounts" class="view">
   <section class="board" id="summary"></section>
 
   <section class="cmdbar">
@@ -132,6 +137,51 @@
         <button class="btn" data-tool="import" data-ic="upload">Import</button></div>
     </div>
   </main>
+  </div>
+
+  <!-- ===================== LOAD (server resources) ===================== -->
+  <div id="view-load" class="view hidden">
+    <div class="load">
+      <div id="load-disabled" class="note hidden">Load monitoring is switched off (<code>SYSMON_INTERVAL = 0</code> in <code>config/settings.json</code>).</div>
+      <div id="load-waiting" class="note hidden">Waiting for the first sample…</div>
+      <div id="load-body" class="hidden">
+        <section class="board" id="load-tiles"></section>
+        <section class="panel">
+          <div class="panel-head"><span class="clabel"><span data-ic="cpu"></span> Cores</span><span id="cores-sub" class="muted"></span></div>
+          <div id="cores" class="cores"></div>
+        </section>
+        <div class="load-grid">
+          <section class="panel">
+            <div class="panel-head"><span class="clabel">CPU · Chrome · RAM</span><span class="spacer"></span>
+              <span class="legend"><i style="background:var(--accent)"></i>CPU total</span>
+              <span class="legend"><i style="background:var(--info)"></i>Chrome share</span>
+              <span class="legend"><i class="dash" style="background:var(--violet)"></i>RAM used</span></div>
+            <svg id="chart-cpu" class="chart" preserveAspectRatio="none"></svg>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><span class="clabel">Selenium latency · loop lag</span><span class="spacer"></span>
+              <span class="legend"><i style="background:var(--accent)"></i>avg call</span>
+              <span class="legend"><i class="dash" style="background:var(--warn)"></i>max call</span>
+              <span class="legend"><i style="background:var(--err)"></i>loop lag</span></div>
+            <svg id="chart-lat" class="chart" preserveAspectRatio="none"></svg>
+          </section>
+        </div>
+        <section class="panel">
+          <div class="panel-head"><span class="clabel"><span data-ic="users"></span> Per account</span><span id="acc-sub" class="muted"></span>
+            <span class="spacer"></span>
+            <select id="acc-sort" title="Sort">
+              <option value="cpu_raw">by CPU</option><option value="rss_mb">by RAM</option><option value="procs">by processes</option><option value="name">by name</option>
+            </select>
+            <a class="btn sm" href="/api/sysmon/csv" download data-ic="download">CSV</a>
+            <a class="btn sm" href="/api/sysmon/csv?kind=accounts" download data-ic="download">Accounts CSV</a></div>
+          <div class="table-wrap"><table class="stats-table" id="load-accounts">
+            <thead><tr><th>Account</th><th>Phase</th><th>Processes</th><th>Threads</th><th>CPU share</th><th>CPU raw</th><th>RAM, MB</th></tr></thead>
+            <tbody></tbody></table></div>
+        </section>
+        <div id="load-status" class="muted mono status-line"></div>
+      </div>
+    </div>
+  </div>
 
   <section id="logpanel" class="console">
     <div class="console-head">
@@ -152,6 +202,7 @@
 
 <script src="icons.js"></script>
 <script src="demo.js"></script>
+<script src="load.js"></script>
 <script src="app.js"></script>
 <script src="dialogs.js"></script>
 </body>
